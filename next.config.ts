@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Silence Turbopack warning when using custom webpack config
+  turbopack: {},
+
+  // Exclude better-sqlite3 from bundling (Node only)
+  serverExternalPackages: ["better-sqlite3"],
+
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -12,9 +18,6 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
-  experimental: {
-    serverComponentsExternalPackages: ["better-sqlite3"],
-  }
 };
 
 export default nextConfig;
