@@ -14,12 +14,13 @@ export async function GET(request: Request) {
         const requests = await query;
 
         // Filter by status if provided
+        // Filter by status if provided
         const filteredRequests = status
-            ? requests.filter(r => r.status === status)
+            ? requests.filter((r: any) => r.status === status)
             : requests;
 
         // Count pending for notification badge
-        const pendingCount = requests.filter(r => r.status === "pending").length;
+        const pendingCount = requests.filter((r: any) => r.status === "pending").length;
 
         return NextResponse.json({
             requests: filteredRequests,
