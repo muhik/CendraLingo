@@ -1,17 +1,42 @@
 import { drizzle } from "drizzle-orm/libsql";
-import { createClient } from "@libsql/client/web";
+import { createClient, Client } from "@libsql/client/web";
 import * as schema from "./schema";
 
-// Helper to prevent Webpack build-time inlining if env var is missing during build
-const getEnv = (key: string) => process.env[key];
+// Lazy initialization - DB client is created per-request with runtime env vars
+let cachedClient: Client | null = null;
 
-const connectionString = getEnv("TURSO_CONNECTION_URL") || "https://placeholder-url-for-build.com";
-const authToken = getEnv("TURSO_AUTH_TOKEN") || "placeholder-token";
+export function getDb() {
+    // Try to get env from Cloudflare runtime context first
+    let url: string | undefined;
+    let token: string | undefined;
 
-// Use @libsql/client for both Edge and Local (file: logic handled if needed, or just remote)
-const client = createClient({
-    url: connectionString,
-    authToken: authToken
+    try {
+        // For Cloudflare Pages runtime
+        const { getRequestContext } = require("@cloudflare/next-on-pages");
+        const ctx = getRequestContext();
+        url = ctx.env.TURSO_CONNECTION_URL;
+        token = ctx.env.TURSO_AUTH_TOKEN;
+    } catch {
+        // Fallback to process.env for local dev / build time
+        url = process.env.TURSO_CONNECTION_URL;
+        token = process.env.TURSO_AUTH_TOKEN;
+    }
+
+    if (!url || !token) {
+        throw new Error(`Database credentials missing. URL: ${url ? 'SET' : 'MISSING'}, Token: ${token ? 'SET' : 'MISSING'}`);
+    }
+
+    // Create client if not cached or if credentials changed
+    if (!cachedClient) {
+        cachedClient = createClient({ url, authToken: token });
+    }
+
+    return drizzle(cachedClient, { schema });
+}
+
+// For backward compatibility - exports a proxy that calls getDb()
+export const db = new Proxy({} as ReturnType<typeof getDb>, {
+    get(_, prop) {
+        return (getDb() as any)[prop];
+    }
 });
-
-export const db = drizzle(client, { schema });
