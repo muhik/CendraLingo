@@ -1,8 +1,8 @@
 import { drizzle } from "drizzle-orm/libsql";
-import { createClient } from "@libsql/client/web";
+import { createClient } from "@libsql/client/http";
 import * as schema from "./schema";
 
-// Environment variables - will be injected by wrangler.toml [vars] at runtime
+// Use HTTP client which is more compatible with edge runtimes
 const connectionString = process.env.TURSO_CONNECTION_URL || "https://placeholder-url-for-build.com";
 const authToken = process.env.TURSO_AUTH_TOKEN || "placeholder-token";
 
