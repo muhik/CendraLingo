@@ -54,7 +54,7 @@ export async function GET(req: Request) {
         const totalPages = Math.ceil(totalItems / limit) || 1;
 
         // Calculate total cashback for this period
-        const totalCashback = claims.reduce((sum, c) => sum + (c.cashbackAmount || 0), 0);
+        const totalCashback = claims.reduce((sum: number, c: any) => sum + (c.cashbackAmount || 0), 0);
 
         return NextResponse.json({
             data: claims,
