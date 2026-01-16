@@ -4,26 +4,38 @@ export const runtime = "edge";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
+// Verify password helper using Web Crypto API (Edge Compatible)
+const verifyPassword = async (password: string, storedHash: string): Promise<boolean> => {
+    const [saltHex, originalHashHex] = storedHash.split(":");
+    if (!saltHex || !originalHashHex) return false;
 
-// Verify password helper
-const verifyPassword = (password: string, hash: string): Promise<boolean> => {
-    return new Promise((resolve, reject) => {
-        const [salt, key] = hash.split(":");
-        // Scrypt might be available in Edge if it's standard Web Crypto or Node compatibility is enabled.
-        // However, standard Web Crypto doesn't have scrypt easily.
-        // For Edge compatibility without polyfills, simplistic hash or imported library is better.
-        // But let's assuming crypto is polyfilled or available in CF workers (Node compat).
-        // If not, we might need a different auth approach.
-        // For now, let's keep crypto but use subtle crypto if possible or assume node compat.
-        // Cloudflare Workers supports 'node:crypto' with compatibility flags.
+    // Convert hex salt to Uint8Array
+    const saltMatch = saltHex.match(/.{1,2}/g);
+    if (!saltMatch) return false;
+    const salt = new Uint8Array(saltMatch.map(byte => parseInt(byte, 16)));
 
-        // Actually, importing 'crypto' works in Next.js Edge runtime (it polyfills subset).
-        // Let's rely on that.
-        crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-            if (err) reject(err);
-            resolve(key === derivedKey.toString("hex"));
-        });
-    });
+    const encoder = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(password),
+        { name: "PBKDF2" },
+        false,
+        ["deriveBits", "deriveKey"]
+    );
+
+    const derivedKey = await crypto.subtle.deriveBits(
+        {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: 100000,
+            hash: "SHA-256",
+        },
+        keyMaterial,
+        256
+    );
+
+    const derivedHashHex = Array.from(new Uint8Array(derivedKey)).map(b => b.toString(16).padStart(2, "0")).join("");
+    return derivedHashHex === originalHashHex;
 };
 
 export async function POST(req: Request) {
