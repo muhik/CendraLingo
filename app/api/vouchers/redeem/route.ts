@@ -38,7 +38,7 @@ export async function POST(req: Request) {
             const allClaims = await db.select({ userId: vouchers.claimedBy }).from(vouchers)
                 .where(gte(vouchers.claimedAt, startOfMonth));
 
-            const uniqueUsers = new Set(allClaims.map(c => c.userId)).size;
+            const uniqueUsers = new Set(allClaims.map((c: any) => c.userId)).size;
 
             if (uniqueUsers >= 1000) {
                 return NextResponse.json({ success: false, message: "KUOTA BULANAN HABIS (Max 1000 User)" }, { status: 400 });
