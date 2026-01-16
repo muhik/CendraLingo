@@ -3,18 +3,36 @@ import { db } from "@/db/drizzle";
 export const runtime = "edge";
 import { users, userProgress } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import crypto from "crypto";
 import { v4 as uuidv4 } from "uuid";
 
-// Helper for password hashing
-const hashPassword = (password: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const salt = crypto.randomBytes(16).toString("hex");
-        crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-            if (err) reject(err);
-            resolve(salt + ":" + derivedKey.toString("hex"));
-        });
-    });
+// Helper for password hashing using Web Crypto API (Edge Compatible)
+const hashPassword = async (password: string): Promise<string> => {
+    const encoder = new TextEncoder();
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(password),
+        { name: "PBKDF2" },
+        false,
+        ["deriveBits", "deriveKey"]
+    );
+
+    const derivedKey = await crypto.subtle.deriveBits(
+        {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: 100000,
+            hash: "SHA-256",
+        },
+        keyMaterial,
+        256
+    );
+
+    const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("");
+    const hashHex = Array.from(new Uint8Array(derivedKey)).map(b => b.toString(16).padStart(2, "0")).join("");
+
+    return `${saltHex}:${hashHex}`;
 };
 
 export async function POST(req: Request) {
