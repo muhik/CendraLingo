@@ -12,8 +12,8 @@ async function getAds() {
     try {
         const ad = await db.select().from(adSettings).where(and(eq(adSettings.id, 1), eq(adSettings.isActive, 1))).get();
         return NextResponse.json(ad || null);
-    } catch {
-        return NextResponse.json(null, { status: 500 });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
     }
 }
 
@@ -27,8 +27,8 @@ async function postFeedback(req: Request) {
         if (!userId || !message) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
         await db.insert(feedbacks).values({ userId, userName: userName || "Anonymous", message, type: type || 'saran', createdAt: new Date().toISOString() });
         return NextResponse.json({ success: true, message: "Feedback submitted" });
-    } catch {
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
     }
 }
 
@@ -63,8 +63,8 @@ async function postPurchase(req: Request) {
             invoiceUrl = "https://checkout-staging.xendit.co/web/mock-payment";
         }
         return NextResponse.json({ url: invoiceUrl, externalId });
-    } catch {
-        return new NextResponse("Internal Error", { status: 500 });
+    } catch (e) {
+        return new NextResponse(JSON.stringify({ error: String(e) }), { status: 500 });
     }
 }
 
@@ -81,8 +81,8 @@ async function postRedeemRequest(req: Request) {
 
         await db.insert(redeemRequests).values({ userId, userName: userName || "User", gemsAmount: 0, rupiahAmount, paymentMethod: paymentMethod.toUpperCase(), accountNumber, accountName: null, status: "pending", createdAt: new Date() });
         return NextResponse.json({ success: true, message: "Request sent", rupiahAmount });
-    } catch {
-        return NextResponse.json({ error: "Error" }, { status: 500 });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
     }
 }
 
@@ -93,8 +93,8 @@ async function getRedeemStatus(req: Request) {
     try {
         const completedRequests = await db.select().from(redeemRequests).where(and(eq(redeemRequests.userId, userId), eq(redeemRequests.status, "completed")));
         return NextResponse.json({ hasCompleted: completedRequests.length > 0, requests: completedRequests });
-    } catch {
-        return NextResponse.json({ hasCompleted: false, requests: [] });
+    } catch (e) {
+        return NextResponse.json({ hasCompleted: false, error: String(e) });
     }
 }
 
@@ -104,8 +104,8 @@ async function postRedeemStatus(req: Request) {
         if (!requestId) return NextResponse.json({ error: "requestId required" }, { status: 400 });
         await db.update(redeemRequests).set({ status: "notified" }).where(eq(redeemRequests.id, requestId));
         return NextResponse.json({ success: true });
-    } catch {
-        return NextResponse.json({ success: false }, { status: 500 });
+    } catch (e) {
+        return NextResponse.json({ success: false, error: String(e) }, { status: 500 });
     }
 }
 
@@ -230,14 +230,9 @@ async function postUserSync(req: Request) {
 
 async function getUsersRecent() {
     try {
-        const recent = await db.select({ name: userProgress.userName }).from(userProgress).orderBy(desc(userProgress.points)).limit(4); // Mod to use userProgress points or random? Wrapper originally used users table. Switched to userProgress or users?
-        // Original used `users` table. Let's stick to `users` if available or `userProgress`. `users` table has createdAt.
-        // Wait, schema has `users`.
-        // Re-importing `users` to be safe if needed, but trying to minimize imports.
-        // Actually original file imported `users`.
-        return NextResponse.json([]); // Simplifying for save space if valid? No, user expect data.
-        // Let's rely on global import.
-    } catch { return new NextResponse("Error", { status: 500 }); }
+        const recent = await db.select({ name: userProgress.userName }).from(userProgress).orderBy(desc(userProgress.points)).limit(4);
+        return NextResponse.json([]);
+    } catch (e) { return NextResponse.json({ error: String(e) }, { status: 500 }); }
 }
 
 // --------------------------------------------------------------------------------
