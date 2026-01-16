@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { Header } from "@/components/lesson/header";
 import { QuestionBubble } from "@/components/lesson/question-bubble";
 import { Footer } from "@/components/lesson/footer";
@@ -24,7 +24,7 @@ import { CorrectFlashAnimation } from "@/components/lesson/correct-flash";
 import { ChallengeSpeak } from "@/components/lesson/challenge-speak";
 import { AuthModal } from "@/components/modals/auth-modal"; // Import AuthModal
 
-export default function LessonPage() {
+function LessonContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const lessonId = Number(searchParams.get("id")) || 1; // Default to 1 if no ID
@@ -648,5 +648,13 @@ export default function LessonPage() {
                 }
             />
         </div >
+    );
+}
+
+export default function LessonPage() {
+    return (
+        <Suspense fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}>
+            <LessonContent />
+        </Suspense>
     );
 }
