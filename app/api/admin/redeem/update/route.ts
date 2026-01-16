@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
+export const runtime = "edge";
 import { redeemRequests, userProgress } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 

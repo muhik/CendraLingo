@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
+export const runtime = "edge";
 import { userTreasureLog, treasureSettings } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 

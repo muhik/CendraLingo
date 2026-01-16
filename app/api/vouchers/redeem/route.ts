@@ -1,4 +1,5 @@
 import { db } from "@/db/drizzle";
+export const runtime = "edge";
 import { vouchers, userProgress } from "@/db/schema";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";

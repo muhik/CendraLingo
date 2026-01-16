@@ -82,3 +82,12 @@ export const adSettings = sqliteTable("ad_settings", {
     updatedAt: text("updated_at")
 });
 
+
+export const feedbacks = sqliteTable("feedbacks", {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id").notNull(),
+    userName: text("user_name"),
+    message: text("message").notNull(),
+    type: text("type").default('saran'),
+    createdAt: text("created_at")
+});

@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import Database from "better-sqlite3";
-import path from "path";
-
-const dbPath = path.join(process.cwd(), "local.db");
+import { db } from "@/db/drizzle";
+export const runtime = "edge";
+import { feedbacks } from "@/db/schema";
+import { desc, sql, count, gte, lte, and } from "drizzle-orm";
 
 // GET: List feedbacks for admin
 export async function GET(request: Request) {
-    let db;
     try {
         const { searchParams } = new URL(request.url);
         const page = parseInt(searchParams.get("page") || "1");
@@ -15,35 +14,30 @@ export async function GET(request: Request) {
         const endDate = searchParams.get("endDate");     // YYYY-MM-DD
         const offset = (page - 1) * limit;
 
-        db = new Database(dbPath);
-
-        let query = "SELECT * FROM feedbacks WHERE 1=1";
-        let countQuery = "SELECT COUNT(*) as total FROM feedbacks WHERE 1=1";
-        const params: any[] = [];
-
+        const filters = [];
         if (startDate) {
-            query += " AND date(created_at) >= ?";
-            countQuery += " AND date(created_at) >= ?";
-            params.push(startDate);
+            filters.push(gte(sql`date(${feedbacks.createdAt})`, startDate));
         }
-
         if (endDate) {
-            query += " AND date(created_at) <= ?";
-            countQuery += " AND date(created_at) <= ?";
-            params.push(endDate);
+            filters.push(lte(sql`date(${feedbacks.createdAt})`, endDate));
         }
-
-        query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
 
         // Count total for pagination
-        const totalResult = db.prepare(countQuery).get(...params) as { total: number };
+        const [totalResult] = await db.select({ total: count() })
+            .from(feedbacks)
+            .where(and(...filters));
+
         const total = totalResult ? totalResult.total : 0;
         const totalPages = Math.ceil(total / limit);
 
         // Fetch paginated data
-        const data = db.prepare(query).all(...params, limit, offset);
+        const data = await db.select()
+            .from(feedbacks)
+            .where(and(...filters))
+            .orderBy(desc(feedbacks.createdAt))
+            .limit(limit)
+            .offset(offset);
 
-        db.close();
         return NextResponse.json({
             data,
             pagination: {
@@ -55,7 +49,6 @@ export async function GET(request: Request) {
         });
     } catch (error) {
         console.error("Feedback list error:", error);
-        if (db) db.close();
         return NextResponse.json({ error: "Server error" }, { status: 500 });
     }
 }

@@ -1,20 +1,22 @@
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
-import db from "better-sqlite3";
-import path from "path";
+import { db } from "@/db/drizzle";
+export const runtime = "edge";
+import { users, userProgress } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { cookies } from "next/headers";
-
-const dbPath = path.join(process.cwd(), "local.db");
 
 export async function POST() {
     try {
-        const database = new db(dbPath);
         const cookieStore = await cookies();
         const existingGuestId = cookieStore.get("guest_session_id")?.value;
 
         // CHECK 1: If cookie exists, verify if user is really in DB (and is GUEST)
         if (existingGuestId) {
-            const existingUser = database.prepare("SELECT id FROM users WHERE id = ? AND role = 'guest'").get(existingGuestId);
+            const existingUser = await db.query.users.findFirst({
+                where: and(eq(users.id, existingGuestId), eq(users.role, "guest"))
+            });
+
             if (existingUser) {
                 return NextResponse.json({
                     success: true,
@@ -28,31 +30,29 @@ export async function POST() {
         const userId = uuidv4();
         const now = new Date();
         const defaultName = `Guest-${userId.substring(0, 6)}`;
+        const guestEmail = `${userId}@guest.com`;
 
-        // Use a transaction
-        const runTransaction = database.transaction(() => {
-            const guestEmail = `${userId}@guest.com`;
+        // Use a transaction (Drizzle)
+        await db.transaction(async (tx) => {
+            await tx.insert(users).values({
+                id: userId,
+                name: defaultName,
+                email: guestEmail,
+                password: "guest_pass",
+                role: "guest",
+                createdAt: now
+            });
 
-            database.prepare(`
-                INSERT INTO users (id, name, email, password, role, created_at) 
-                VALUES (?, ?, ?, ?, ?, ?)
-            `).run(userId, defaultName, guestEmail, "guest_pass", "guest", now.getTime());
-
-            database.prepare(`
-                INSERT INTO user_progress (user_id, user_name, user_image, hearts, points, is_guest, has_active_subscription) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            `).run(
-                userId,
-                defaultName,
-                "/mascot.svg",
-                5,
-                0,
-                1,
-                0
-            );
+            await tx.insert(userProgress).values({
+                userId: userId,
+                userName: defaultName,
+                userImage: "/mascot.svg",
+                hearts: 5,
+                points: 0,
+                isGuest: true,
+                hasActiveSubscription: false
+            });
         });
-
-        runTransaction();
 
         // SET COOKIE (Persistent for 1 year)
         cookieStore.set("guest_session_id", userId, {

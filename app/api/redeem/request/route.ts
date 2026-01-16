@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
+export const runtime = "edge";
 import { redeemRequests } from "@/db/schema";
 
 // No minimum - even Rp 1 is allowed

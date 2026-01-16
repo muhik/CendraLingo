@@ -1,4 +1,5 @@
 import { db } from "@/db/drizzle";
+export const runtime = "edge";
 import { userProgress } from "@/db/schema";
 import { NextResponse } from "next/server";
 

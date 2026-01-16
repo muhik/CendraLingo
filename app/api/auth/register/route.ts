@@ -1,11 +1,10 @@
-
 import { NextResponse } from "next/server";
-import db from "better-sqlite3";
-import path from "path";
+import { db } from "@/db/drizzle";
+export const runtime = "edge";
+import { users, userProgress } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import crypto from "crypto";
 import { v4 as uuidv4 } from "uuid";
-
-const dbPath = path.join(process.cwd(), "local.db");
 
 // Helper for password hashing
 const hashPassword = (password: string): Promise<string> => {
@@ -27,10 +26,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: "Missing fields" }, { status: 400 });
         }
 
-        const database = new db(dbPath);
-
         // Check if user exists
-        const existingUser = database.prepare("SELECT * FROM users WHERE email = ?").get(email);
+        const existingUser = await db.query.users.findFirst({
+            where: eq(users.email, email)
+        });
+
         if (existingUser) {
             return NextResponse.json({ message: "Email already registered" }, { status: 409 });
         }
@@ -41,60 +41,65 @@ export async function POST(req: Request) {
         const now = new Date();
         const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 Days
 
-        const runTransaction = database.transaction(() => {
+        await db.transaction(async (tx) => {
             // SCENARIO 1: UPGRADE EXISTING GUEST (Server-Side Guest)
             if (guestId) {
                 // Check if guest exists first
-                const guestUser = database.prepare("SELECT * FROM users WHERE id = ? AND role = 'guest'").get(guestId);
+                const guestUser = await tx.query.users.findFirst({
+                    where: and(eq(users.id, guestId), eq(users.role, "guest"))
+                });
 
                 if (guestUser) {
                     // Update the EXISTING user record
-                    database.prepare(`
-                        UPDATE users 
-                        SET name = ?, email = ?, password = ?, role = 'user'
-                        WHERE id = ?
-                    `).run(name, email, hashedPassword, guestId);
+                    await tx.update(users)
+                        .set({
+                            name,
+                            email,
+                            password: hashedPassword,
+                            role: "user"
+                        })
+                        .where(eq(users.id, guestId));
 
                     // Update User Progress (Merge logic)
-                    // If guest had progress, we keep it. We just update the name/image if needed.
-                    // If we want to give bonus, we update points.
                     const finalPoints = (guestPoints || 0) + 1000;
                     const finalHearts = (guestHearts !== undefined) ? guestHearts : 5;
 
-                    database.prepare(`
-                        UPDATE user_progress 
-                        SET user_name = ?, points = ?, hearts = ?, is_guest = 0, has_active_subscription = 1, subscription_ends_at = ?
-                        WHERE user_id = ?
-                    `).run(name, finalPoints, finalHearts, expiresAt.getTime(), guestId);
+                    await tx.update(userProgress)
+                        .set({
+                            userName: name,
+                            points: finalPoints,
+                            hearts: finalHearts,
+                            isGuest: false,
+                            hasActiveSubscription: true,
+                            subscriptionEndsAt: expiresAt
+                        })
+                        .where(eq(userProgress.userId, guestId));
 
                     return; // Done
                 }
             }
 
             // SCENARIO 2: NEW USER (Normal Register)
-            // Insert into users table
-            database.prepare(`
-                INSERT INTO users (id, name, email, password, role, created_at) 
-                VALUES (?, ?, ?, ?, ?, ?)
-            `).run(userId, name, email, hashedPassword, "user", new Date().getTime());
-
-            // Initialize user_progress
-            database.prepare(`
-                INSERT INTO user_progress (user_id, user_name, user_image, hearts, points, is_guest, has_active_subscription, subscription_ends_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            `).run(
-                userId,
+            await tx.insert(users).values({
+                id: userId,
                 name,
-                "/mascot.svg",
-                5,
-                1000, // Bonus 1000 gems
-                0, // is_guest = false
-                1, // Bonus Subscription
-                expiresAt.getTime()
-            );
-        });
+                email,
+                password: hashedPassword,
+                role: "user",
+                createdAt: now
+            });
 
-        runTransaction();
+            await tx.insert(userProgress).values({
+                userId,
+                userName: name,
+                userImage: "/mascot.svg",
+                hearts: 5,
+                points: 1000, // Bonus 1000 gems
+                isGuest: false,
+                hasActiveSubscription: true, // Bonus Subscription
+                subscriptionEndsAt: expiresAt
+            });
+        });
 
         return NextResponse.json({
             success: true,
