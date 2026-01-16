@@ -1,0 +1,177 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-lexend), var(--font-geist-sans), sans-serif;
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-lexend), sans-serif;
+
+  /* Forest Theme Colors */
+  --color-primary: #2bee6c;
+  --color-background-light: #f6f8f6;
+  --color-background-dark: #102216;
+  --color-card-dark: #162f21;
+  --color-secondary-dark: #23482f;
+  --color-accent-gold: #ffd700;
+  --color-accent-blue: #4aa9ff;
+  --color-accent-red: #ff4b4b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@keyframes bounce-custom {
+
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-20px) scale(1.1);
+  }
+}
+
+.animate-bounce-custom {
+  animation: bounce-custom 1s infinite ease-in-out;
+}
+
+
+/* Talking Animation (Jaw movement simulation) */
+@keyframes talk {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scaleY(1.05) scaleX(0.98) translateY(-2px);
+  }
+}
+
+.animate-talking {
+  animation: talk 0.2s infinite ease-in-out;
+  transform-origin: bottom center;
+}
+
+/* Bubble Arrow */
+.bubble-left::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 10px 10px 10px 0;
+  border-color: transparent #e2e8f0 transparent transparent;
+  /* Border color match */
+}
+
+.bubble-left::after {
+  content: "";
+  position: absolute;
+  left: -7px;
+  /* Adjusted for border thickness */
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 9px 9px 9px 0;
+  border-color: transparent white transparent transparent;
+}
+
+
+/* --- CUSTOM ANIMATIONS for Modals (Mimicking tailwindcss-animate) --- */
+
+/* Base Animation Class */
+.animate-in {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+}
+
+/* Fade In */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation-name: fadeIn;
+}
+
+/* Zoom In 95% */
+@keyframes zoomIn95 {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.zoom-in-95 {
+  animation-name: zoomIn95;
+}
+
+/* Slide In From Right */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(2rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slide-in-from-right-10 {
+  animation-name: slideInRight;
+}
+
+/* Combined Classes Support (Simple Overrides) */
+.animate-in.zoom-in-95 {
+  animation-name: zoomIn95 !important;
+}
+
+.animate-in.slide-in-from-right-10 {
+  animation-name: slideInRight !important;
+}
+
+/* Helper for ping animation if missing */
+@keyframes ping {
+
+  75%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.animate-ping {
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
