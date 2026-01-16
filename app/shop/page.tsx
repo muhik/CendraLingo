@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { StickyHeader } from "@/components/layout/sticky-header";
 import { ShopItem } from "@/components/shop/shop-item";
 import { AdSidebar } from "@/components/layout/ad-sidebar";
@@ -17,7 +17,7 @@ import { ProModal } from "@/components/modals/pro-modal";
 
 import { useSearchParams } from "next/navigation";
 
-export default function ShopPage() {
+function ShopContent() {
     const searchParams = useSearchParams();
     const autoUpgrade = searchParams.get("auto_upgrade");
     const { userId, points, hearts, cashbackBalance, spendPoints, refillHearts, addPoints, addCashback, isGuest, hasActiveSubscription, upgradeToPro, syncWithDb, refreshUserData } = useUserProgress();
@@ -452,5 +452,14 @@ export default function ShopPage() {
                 </div>
             </div>
         </div>
+    );
+
+}
+
+export default function ShopPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-[#022c22] flex items-center justify-center text-white">Loading Shop...</div>}>
+            <ShopContent />
+        </Suspense>
     );
 }
