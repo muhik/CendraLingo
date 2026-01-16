@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
+import { tursoQuery, tursoQueryOne, tursoExecute } from "@/db/turso-http";
 export const runtime = "edge";
 import { adSettings, feedbacks, userProgress, vouchers, treasureSettings, userTreasureLog, redeemRequests } from "@/db/schema";
 import { eq, and, desc, sql, gte } from "drizzle-orm";
@@ -10,8 +11,9 @@ import { createInvoice } from "@/lib/xendit";
 // --------------------------------------------------------------------------------
 async function getAds() {
     try {
-        const ad = await db.select().from(adSettings).where(and(eq(adSettings.id, 1), eq(adSettings.isActive, 1))).get();
-        return NextResponse.json(ad || null);
+        const rows = await tursoQuery("SELECT * FROM ad_settings WHERE id = 1 AND is_active = 1 LIMIT 1");
+        const ad = rows[0] || null;
+        return NextResponse.json(ad);
     } catch (e) {
         return NextResponse.json({ error: String(e) }, { status: 500 });
     }
@@ -230,8 +232,8 @@ async function postUserSync(req: Request) {
 
 async function getUsersRecent() {
     try {
-        const recent = await db.select({ name: userProgress.userName }).from(userProgress).orderBy(desc(userProgress.points)).limit(4);
-        return NextResponse.json([]);
+        const rows = await tursoQuery("SELECT user_name as name FROM user_progress ORDER BY points DESC LIMIT 4");
+        return NextResponse.json(rows);
     } catch (e) { return NextResponse.json({ error: String(e) }, { status: 500 }); }
 }
 
