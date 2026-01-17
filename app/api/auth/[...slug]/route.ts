@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { db } from "@/db/drizzle";
-export const runtime = "edge";
-import { users, userProgress } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { tursoQuery, tursoQueryOne, tursoExecute } from "@/db/turso-http";
 import { cookies } from "next/headers";
 import { v4 as uuidv4 } from "uuid";
+export const runtime = "edge";
 
 // --------------------------------------------------------------------------------
 // HELPERS
@@ -37,95 +35,89 @@ const hashPassword = async (password: string): Promise<string> => {
 // HANDLERS
 // --------------------------------------------------------------------------------
 
-// GET: /api/auth/reset
 async function handleReset() {
     const cookieStore = await cookies();
     cookieStore.delete("guest_session_id");
     return NextResponse.json({ message: "Guest session reset successfully" });
 }
 
-// POST: /api/auth/guest
 async function handleGuest() {
     try {
         const cookieStore = await cookies();
         const existingGuestId = cookieStore.get("guest_session_id")?.value;
         if (existingGuestId) {
-            const existingUser = await db.query.users.findFirst({ where: and(eq(users.id, existingGuestId), eq(users.role, "guest")) });
-            if (existingUser) return NextResponse.json({ success: true, userId: existingGuestId, message: "Resuming existing guest session" });
+            const users = await tursoQuery("SELECT * FROM users WHERE id = ? AND role = 'guest'", [existingGuestId]);
+            if (users.length > 0) return NextResponse.json({ success: true, userId: existingGuestId, message: "Resuming existing guest session" });
         }
+
         const userId = uuidv4();
-        const now = new Date();
+        const now = Date.now();
         const defaultName = `Guest-${userId.substring(0, 6)}`;
         const guestEmail = `${userId}@guest.com`;
 
-        await db.transaction(async (tx) => {
-            await tx.insert(users).values({ id: userId, name: defaultName, email: guestEmail, password: "guest_pass", role: "guest", createdAt: now });
-            await tx.insert(userProgress).values({ userId: userId, userName: defaultName, userImage: "/mascot.svg", hearts: 5, points: 0, isGuest: true, hasActiveSubscription: false });
-        });
+        await tursoExecute("INSERT INTO users (id, name, email, password, role, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [userId, defaultName, guestEmail, "guest_pass", "guest", now]);
+        await tursoExecute("INSERT INTO user_progress (user_id, user_name, user_image, hearts, points, is_guest, has_active_subscription) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [userId, defaultName, "/mascot.svg", 5, 0, 1, 0]);
 
         cookieStore.set("guest_session_id", userId, { path: "/", maxAge: 60 * 60 * 24 * 365, httpOnly: true, sameSite: "lax" });
         return NextResponse.json({ success: true, userId, message: "New guest session created" });
-    } catch {
-        return new NextResponse("Internal Error", { status: 500 });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
     }
 }
 
-// POST: /api/auth/login
 async function handleLogin(req: Request) {
     try {
         const body = await req.json();
         const { email, password } = body;
         if (!email || !password) return new NextResponse("Missing fields", { status: 400 });
 
-        const user = await db.query.users.findFirst({ where: eq(users.email, email) });
+        const users = await tursoQuery("SELECT * FROM users WHERE email = ?", [email]);
+        const user = users[0];
         if (!user) return NextResponse.json({ message: "Invalid email or password" }, { status: 401 });
 
         const isValid = await verifyPassword(password, user.password);
         if (!isValid) return NextResponse.json({ message: "Invalid email or password" }, { status: 401 });
 
         return NextResponse.json({ success: true, userId: user.id, name: user.name });
-    } catch {
-        return new NextResponse("Internal Error", { status: 500 });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
     }
 }
 
-// POST: /api/auth/register
 async function handleRegister(req: Request) {
     try {
         const body = await req.json();
         const { name, email, password, guestId, guestPoints, guestHearts } = body;
         if (!name || !email || !password) return NextResponse.json({ message: "Missing fields" }, { status: 400 });
 
-        const existingUser = await db.query.users.findFirst({ where: eq(users.email, email) });
-        if (existingUser) return NextResponse.json({ message: "Email already registered" }, { status: 409 });
+        const existingUsers = await tursoQuery("SELECT * FROM users WHERE email = ?", [email]);
+        if (existingUsers.length > 0) return NextResponse.json({ message: "Email already registered" }, { status: 409 });
 
         const hashedPassword = await hashPassword(password);
         const userId = uuidv4();
-        const now = new Date();
-        const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const now = Date.now();
+        const expiresAt = now + 30 * 24 * 60 * 60 * 1000;
 
-        await db.transaction(async (tx) => {
-            if (guestId) {
-                const guestUser = await tx.query.users.findFirst({ where: and(eq(users.id, guestId), eq(users.role, "guest")) });
-                if (guestUser) {
-                    await tx.update(users).set({ name, email, password: hashedPassword, role: "user" }).where(eq(users.id, guestId));
-                    await tx.update(userProgress).set({
-                        userName: name, points: (guestPoints || 0) + 1000, hearts: (guestHearts !== undefined) ? guestHearts : 5,
-                        isGuest: false, hasActiveSubscription: true, subscriptionEndsAt: expiresAt
-                    }).where(eq(userProgress.userId, guestId));
-                    return;
-                }
+        if (guestId) {
+            const guestUsers = await tursoQuery("SELECT * FROM users WHERE id = ? AND role = 'guest'", [guestId]);
+            if (guestUsers.length > 0) {
+                await tursoExecute("UPDATE users SET name = ?, email = ?, password = ?, role = 'user' WHERE id = ?", [name, email, hashedPassword, guestId]);
+                await tursoExecute("UPDATE user_progress SET user_name = ?, points = points + 1000, hearts = ?, is_guest = 0, has_active_subscription = 1, subscription_ends_at = ? WHERE user_id = ?",
+                    [name, guestHearts !== undefined ? guestHearts : 5, expiresAt, guestId]);
+                return NextResponse.json({ success: true, userId: guestId, name, message: "Account created! 1000 Gems Bonus Added!" });
             }
-            await tx.insert(users).values({ id: userId, name, email, password: hashedPassword, role: "user", createdAt: now });
-            await tx.insert(userProgress).values({
-                userId, userName: name, userImage: "/mascot.svg", hearts: 5, points: 1000,
-                isGuest: false, hasActiveSubscription: true, subscriptionEndsAt: expiresAt
-            });
-        });
+        }
+
+        await tursoExecute("INSERT INTO users (id, name, email, password, role, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [userId, name, email, hashedPassword, "user", now]);
+        await tursoExecute("INSERT INTO user_progress (user_id, user_name, user_image, hearts, points, is_guest, has_active_subscription, subscription_ends_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [userId, name, "/mascot.svg", 5, 1000, 0, 1, expiresAt]);
 
         return NextResponse.json({ success: true, userId, name, message: "Account created! 1000 Gems Bonus Added!" });
-    } catch {
-        return NextResponse.json({ message: "Internal Error" }, { status: 500 });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
     }
 }
 

@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
-import { db } from "@/db/drizzle";
+import { tursoQuery, tursoExecute } from "@/db/turso-http";
 export const runtime = "edge";
-import { adSettings, vouchers, userProgress, feedbacks, redeemRequests, treasureSettings } from "@/db/schema";
-import { eq, desc, and, gte, lte, sql, count } from "drizzle-orm";
-
-// HELPER: Configs & Routes
-// Defines which sub-paths exist in this consolidated route.
 
 // --------------------------------------------------------------------------------
 // GET HANDLERS
@@ -13,10 +8,10 @@ import { eq, desc, and, gte, lte, sql, count } from "drizzle-orm";
 
 async function getAds() {
     try {
-        const ad = await db.select().from(adSettings).where(eq(adSettings.id, 1)).get();
-        return NextResponse.json(ad || {});
-    } catch {
-        return NextResponse.json({ error: "Failed to fetch ads" }, { status: 500 });
+        const rows = await tursoQuery("SELECT * FROM ad_settings WHERE id = 1");
+        return NextResponse.json(rows[0] || {});
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
     }
 }
 
@@ -25,44 +20,21 @@ async function getClaims(req: Request) {
         const { searchParams } = new URL(req.url);
         const page = parseInt(searchParams.get("page") || "1");
         const limit = parseInt(searchParams.get("limit") || "10");
-        const startDate = searchParams.get("startDate");
-        const endDate = searchParams.get("endDate");
         const offset = (page - 1) * limit;
 
-        const conditions = [eq(vouchers.isClaimed, true)];
-        if (startDate) {
-            const start = new Date(startDate);
-            start.setHours(0, 0, 0, 0);
-            conditions.push(gte(vouchers.claimedAt, start));
-        }
-        if (endDate) {
-            const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
-            conditions.push(lte(vouchers.claimedAt, end));
-        }
+        const claims = await tursoQuery(`
+            SELECT v.code, v.claimed_by, p.user_name, v.value_rp, v.cashback_amount, v.claimed_at
+            FROM vouchers v
+            LEFT JOIN user_progress p ON v.claimed_by = p.user_id
+            WHERE v.is_claimed = 1
+            ORDER BY v.claimed_at DESC
+            LIMIT ? OFFSET ?
+        `, [limit, offset]);
 
-        const whereClause = and(...conditions);
-
-        const claims = await db.select({
-            code: vouchers.code,
-            claimedBy: vouchers.claimedBy,
-            userName: userProgress.userName,
-            valueRp: vouchers.valueRp,
-            cashbackAmount: vouchers.cashbackAmount,
-            claimedAt: vouchers.claimedAt,
-        })
-            .from(vouchers)
-            .leftJoin(userProgress, eq(vouchers.claimedBy, userProgress.userId))
-            .where(whereClause)
-            .orderBy(desc(vouchers.claimedAt))
-            .limit(limit)
-            .offset(offset);
-
-        // Simple count
-        const allClaims = await db.select({ id: vouchers.id }).from(vouchers).where(whereClause);
-        const totalItems = allClaims.length;
+        const countResult = await tursoQuery("SELECT COUNT(*) as total FROM vouchers WHERE is_claimed = 1");
+        const totalItems = countResult[0]?.total || 0;
         const totalPages = Math.ceil(totalItems / limit) || 1;
-        const totalCashback = claims.reduce((sum: number, c: any) => sum + (c.cashbackAmount || 0), 0);
+        const totalCashback = claims.reduce((sum: number, c: any) => sum + (c.cashback_amount || 0), 0);
 
         return NextResponse.json({
             data: claims,
@@ -70,8 +42,7 @@ async function getClaims(req: Request) {
             summary: { totalCashback }
         });
     } catch (e) {
-        console.error(e);
-        return NextResponse.json({ data: [] }, { status: 500 });
+        return NextResponse.json({ data: [], error: String(e) }, { status: 500 });
     }
 }
 
@@ -80,26 +51,20 @@ async function getFeedback(req: Request) {
         const { searchParams } = new URL(req.url);
         const page = parseInt(searchParams.get("page") || "1");
         const limit = parseInt(searchParams.get("limit") || "10");
-        const startDate = searchParams.get("startDate");
-        const endDate = searchParams.get("endDate");
         const offset = (page - 1) * limit;
 
-        const filters = [];
-        if (startDate) filters.push(gte(sql`date(${feedbacks.createdAt})`, startDate));
-        if (endDate) filters.push(lte(sql`date(${feedbacks.createdAt})`, endDate));
-
-        const [totalResult] = await db.select({ total: count() }).from(feedbacks).where(and(...filters));
-        const total = totalResult ? totalResult.total : 0;
+        const countResult = await tursoQuery("SELECT COUNT(*) as total FROM feedbacks");
+        const total = countResult[0]?.total || 0;
         const totalPages = Math.ceil(total / limit);
 
-        const data = await db.select().from(feedbacks).where(and(...filters)).orderBy(desc(feedbacks.createdAt)).limit(limit).offset(offset);
+        const data = await tursoQuery("SELECT * FROM feedbacks ORDER BY created_at DESC LIMIT ? OFFSET ?", [limit, offset]);
 
         return NextResponse.json({
             data,
             pagination: { total, page, totalPages, limit }
         });
-    } catch {
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
     }
 }
 
@@ -108,33 +73,39 @@ async function getRedeem(req: Request) {
         const { searchParams } = new URL(req.url);
         const status = searchParams.get("status");
 
-        const requests = await db.select().from(redeemRequests).orderBy(desc(redeemRequests.createdAt));
-        const filteredRequests = status ? requests.filter((r: any) => r.status === status) : requests;
-        const pendingCount = requests.filter((r: any) => r.status === "pending").length;
+        let requests;
+        if (status) {
+            requests = await tursoQuery("SELECT * FROM redeem_requests WHERE status = ? ORDER BY created_at DESC", [status]);
+        } else {
+            requests = await tursoQuery("SELECT * FROM redeem_requests ORDER BY created_at DESC");
+        }
 
-        return NextResponse.json({ requests: filteredRequests, pendingCount, total: requests.length });
-    } catch {
-        return NextResponse.json({ error: "Error" }, { status: 500 });
+        const pendingResult = await tursoQuery("SELECT COUNT(*) as count FROM redeem_requests WHERE status = 'pending'");
+        const pendingCount = pendingResult[0]?.count || 0;
+
+        return NextResponse.json({ requests, pendingCount, total: requests.length });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
     }
 }
 
 async function getTreasureSettings() {
     try {
-        const settings = await db.select().from(treasureSettings).limit(1);
+        const settings = await tursoQuery("SELECT * FROM treasure_settings LIMIT 1");
         if (settings.length === 0) {
-            return NextResponse.json({ id: null, paid4linkUrl: null, isEnabled: true, requirePaid4link: false });
+            return NextResponse.json({ id: null, paid4link_url: null, is_enabled: 1, require_paid4link: 0 });
         }
         return NextResponse.json(settings[0]);
-    } catch {
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
     }
 }
 
 async function getUsers() {
     try {
-        const users = await db.select().from(userProgress);
+        const users = await tursoQuery("SELECT * FROM user_progress");
         return NextResponse.json(users);
-    } catch {
+    } catch (e) {
         return NextResponse.json([], { status: 500 });
     }
 }
@@ -144,30 +115,19 @@ async function getVouchers(req: Request) {
         const { searchParams } = new URL(req.url);
         const page = parseInt(searchParams.get("page") || "1");
         const limit = parseInt(searchParams.get("limit") || "50");
-        const startDate = searchParams.get("startDate");
-        const endDate = searchParams.get("endDate");
         const offset = (page - 1) * limit;
 
-        const conditions = [];
-        if (startDate) conditions.push(gte(vouchers.createdAt, new Date(startDate)));
-        if (endDate) {
-            const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
-            conditions.push(lte(vouchers.createdAt, end));
-        }
-        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
-        const data = await db.select().from(vouchers).where(whereClause).orderBy(desc(vouchers.createdAt)).limit(limit).offset(offset);
-        const allVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(whereClause);
-        const totalItems = allVouchers.length;
+        const data = await tursoQuery("SELECT * FROM vouchers ORDER BY created_at DESC LIMIT ? OFFSET ?", [limit, offset]);
+        const countResult = await tursoQuery("SELECT COUNT(*) as total FROM vouchers");
+        const totalItems = countResult[0]?.total || 0;
         const totalPages = Math.ceil(totalItems / limit);
 
         return NextResponse.json({
             data,
             pagination: { page, limit, totalItems, totalPages }
         });
-    } catch {
-        return NextResponse.json({ data: [] }, { status: 500 });
+    } catch (e) {
+        return NextResponse.json({ data: [], error: String(e) }, { status: 500 });
     }
 }
 
@@ -179,13 +139,13 @@ async function postAds(req: Request) {
     try {
         const body = await req.json();
         const { type, script_code, image_url, target_url, is_active } = body;
-        await db.update(adSettings).set({
-            type, scriptCode: script_code || "", imageUrl: image_url || "", targetUrl: target_url || "",
-            isActive: is_active ? 1 : 0, updatedAt: new Date().toISOString()
-        }).where(eq(adSettings.id, 1));
+        await tursoExecute(
+            "UPDATE ad_settings SET type = ?, script_code = ?, image_url = ?, target_url = ?, is_active = ?, updated_at = ? WHERE id = 1",
+            [type, script_code || "", image_url || "", target_url || "", is_active ? 1 : 0, new Date().toISOString()]
+        );
         return NextResponse.json({ success: true });
-    } catch {
-        return NextResponse.json({ error: "Failed" }, { status: 500 });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
     }
 }
 
@@ -195,20 +155,24 @@ async function postRedeemUpdate(req: Request) {
         const { id, status, adminNotes } = body;
         if (!id || !status) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
-        const request_data = await db.select().from(redeemRequests).where(eq(redeemRequests.id, id)).get();
+        const requests = await tursoQuery("SELECT * FROM redeem_requests WHERE id = ?", [id]);
+        const request_data = requests[0];
         if (!request_data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
         if (status === "rejected" && request_data.status !== "rejected") {
-            await db.run(sql`UPDATE user_progress SET cashback_balance = cashback_balance + ${request_data.rupiahAmount} WHERE user_id = ${request_data.userId}`);
+            await tursoExecute("UPDATE user_progress SET cashback_balance = cashback_balance + ? WHERE user_id = ?",
+                [request_data.rupiah_amount, request_data.user_id]);
         }
 
-        await db.update(redeemRequests).set({
-            status, adminNotes: adminNotes || null, processedAt: status !== "pending" ? new Date() : null
-        }).where(eq(redeemRequests.id, id));
+        const processedAt = status !== "pending" ? Date.now() : null;
+        await tursoExecute(
+            "UPDATE redeem_requests SET status = ?, admin_notes = ?, processed_at = ? WHERE id = ?",
+            [status, adminNotes || null, processedAt, id]
+        );
 
         return NextResponse.json({ success: true, message: `Status updated to ${status}` });
-    } catch {
-        return NextResponse.json({ error: "Error" }, { status: 500 });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
     }
 }
 
@@ -216,20 +180,22 @@ async function postTreasureSettings(req: Request) {
     try {
         const body = await req.json();
         const { paid4linkUrl, isEnabled, requirePaid4link } = body;
-        const existing = await db.select().from(treasureSettings).limit(1);
+        const existing = await tursoQuery("SELECT * FROM treasure_settings LIMIT 1");
 
         if (existing.length > 0) {
-            await db.update(treasureSettings).set({
-                paid4linkUrl: paid4linkUrl || null, isEnabled: isEnabled ?? true, requirePaid4link: requirePaid4link ?? false, updatedAt: new Date()
-            }).where(eq(treasureSettings.id, existing[0].id));
+            await tursoExecute(
+                "UPDATE treasure_settings SET paid4link_url = ?, is_enabled = ?, require_paid4link = ?, updated_at = ? WHERE id = ?",
+                [paid4linkUrl || null, isEnabled ? 1 : 0, requirePaid4link ? 1 : 0, Date.now(), existing[0].id]
+            );
         } else {
-            await db.insert(treasureSettings).values({
-                paid4linkUrl: paid4linkUrl || null, isEnabled: isEnabled ?? true, requirePaid4link: requirePaid4link ?? false, updatedAt: new Date()
-            });
+            await tursoExecute(
+                "INSERT INTO treasure_settings (paid4link_url, is_enabled, require_paid4link, updated_at) VALUES (?, ?, ?, ?)",
+                [paid4linkUrl || null, isEnabled ? 1 : 0, requirePaid4link ? 1 : 0, Date.now()]
+            );
         }
         return NextResponse.json({ success: true });
-    } catch {
-        return NextResponse.json({ error: "Error" }, { status: 500 });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
     }
 }
 
@@ -237,10 +203,10 @@ async function postUsersUpdate(req: Request) {
     try {
         const body = await req.json();
         const { userId, hasActiveSubscription } = body;
-        await db.update(userProgress).set({ hasActiveSubscription }).where(eq(userProgress.userId, userId));
+        await tursoExecute("UPDATE user_progress SET has_active_subscription = ? WHERE user_id = ?", [hasActiveSubscription ? 1 : 0, userId]);
         return NextResponse.json({ success: true });
-    } catch {
-        return NextResponse.json({ success: false }, { status: 500 });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
     }
 }
 
@@ -256,7 +222,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
         case "ads": return getAds();
         case "claims": return getClaims(req);
         case "feedback": return getFeedback(req);
-        case "redeem": return getRedeem(req); // List
+        case "redeem": return getRedeem(req);
         case "treasure-settings": return getTreasureSettings();
         case "users": return getUsers();
         case "vouchers": return getVouchers(req);
