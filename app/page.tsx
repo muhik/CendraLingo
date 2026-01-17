@@ -172,6 +172,34 @@ export default function Home() {
                 I HAVE AN ACCOUNT
               </Button>
             </div>
+
+            {/* Jawara PRO Promo */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+              className="w-full pt-2"
+            >
+              <button
+                onClick={handleSubscribe}
+                className="w-full md:w-auto group relative overflow-hidden bg-gradient-to-r from-amber-400 to-yellow-500 p-[1px] rounded-xl shadow-lg hover:shadow-yellow-500/20 transition-all active:scale-[0.98]"
+              >
+                <div className="relative bg-[#102216] rounded-[11px] px-5 py-3 flex items-center justify-between gap-4 group-hover:bg-[#162f21] transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-yellow-400/20 p-2 rounded-lg">
+                      <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <span className="text-yellow-400 font-bold text-xs tracking-wider uppercase">Jawara PRO</span>
+                      <span className="text-white font-bold text-sm">
+                        Langganan Cuma Rp 49.000
+                      </span>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                </div>
+              </button>
+            </motion.div>
             {/* Add AuthModal Component call at end of component, e.g. before Footer or after Main */}
 
 
