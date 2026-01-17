@@ -58,7 +58,7 @@ export default function Home() {
           {/* Logo */}
           <div className="flex items-center gap-2">
             <div className="relative w-8 h-8 md:w-10 md:h-10">
-              <img src="/mascot_final.png?v=fixed" alt="Logo" className="object-contain w-full h-full" />
+              <img src="/mascot_final.png" alt="Logo" className="object-contain w-full h-full" />
             </div>
             <span className="text-xl md:text-2xl font-bold tracking-tight text-white">Cendra Lingo</span>
             {/* Removed AI Badge */}
@@ -143,7 +143,7 @@ export default function Home() {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-emerald-200">
                 language.
               </span> <br />
-              <span className="text-primary">Zero friction. (v2)</span>
+              <span className="text-primary">Zero friction.</span>
             </h1>
 
             <p className="text-lg lg:text-xl text-gray-400 max-w-[540px] leading-relaxed font-medium">
@@ -224,7 +224,7 @@ export default function Home() {
               <div className="relative z-10 flex flex-col items-center">
                 {/* Mascot */}
                 <img
-                  src="/mascot_final.png?v=fixed"
+                  src="/mascot_final.png"
                   width={300}
                   height={300}
                   alt="Learning Mascot"
