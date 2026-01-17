@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
-import { db } from "@/db/drizzle";
-import { tursoQuery, tursoQueryOne, tursoExecute } from "@/db/turso-http";
-export const runtime = "edge";
-import { adSettings, feedbacks, userProgress, vouchers, treasureSettings, userTreasureLog, redeemRequests } from "@/db/schema";
-import { eq, and, desc, sql, gte } from "drizzle-orm";
+import { tursoQuery, tursoExecute } from "@/db/turso-http";
 import { createInvoice } from "@/lib/xendit";
+export const runtime = "edge";
 
 // --------------------------------------------------------------------------------
 // LOGIC: ADS
@@ -27,7 +24,10 @@ async function postFeedback(req: Request) {
         const body = await req.json();
         const { userId, userName, message, type } = body;
         if (!userId || !message) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-        await db.insert(feedbacks).values({ userId, userName: userName || "Anonymous", message, type: type || 'saran', createdAt: new Date().toISOString() });
+        await tursoExecute(
+            "INSERT INTO feedbacks (user_id, user_name, message, type, created_at) VALUES (?, ?, ?, ?, ?)",
+            [userId, userName || "Anonymous", message, type || 'saran', new Date().toISOString()]
+        );
         return NextResponse.json({ success: true, message: "Feedback submitted" });
     } catch (e) {
         return NextResponse.json({ error: String(e) }, { status: 500 });
@@ -61,7 +61,6 @@ async function postPurchase(req: Request) {
             });
             invoiceUrl = invoice.invoiceUrl;
         } else {
-            console.log("No Xendit Key, Mocking");
             invoiceUrl = "https://checkout-staging.xendit.co/web/mock-payment";
         }
         return NextResponse.json({ url: invoiceUrl, externalId });
@@ -81,7 +80,10 @@ async function postRedeemRequest(req: Request) {
         if (rupiahAmount < 1) return NextResponse.json({ error: "Minimum penarikan Rp 1" }, { status: 400 });
         if (paymentMethod.toUpperCase() !== "DANA") return NextResponse.json({ error: "Hanya DANA" }, { status: 400 });
 
-        await db.insert(redeemRequests).values({ userId, userName: userName || "User", gemsAmount: 0, rupiahAmount, paymentMethod: paymentMethod.toUpperCase(), accountNumber, accountName: null, status: "pending", createdAt: new Date() });
+        await tursoExecute(
+            "INSERT INTO redeem_requests (user_id, user_name, gems_amount, rupiah_amount, payment_method, account_number, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [userId, userName || "User", 0, rupiahAmount, paymentMethod.toUpperCase(), accountNumber, "pending", Date.now()]
+        );
         return NextResponse.json({ success: true, message: "Request sent", rupiahAmount });
     } catch (e) {
         return NextResponse.json({ error: String(e) }, { status: 500 });
@@ -93,8 +95,11 @@ async function getRedeemStatus(req: Request) {
     const userId = searchParams.get("userId");
     if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
     try {
-        const completedRequests = await db.select().from(redeemRequests).where(and(eq(redeemRequests.userId, userId), eq(redeemRequests.status, "completed")));
-        return NextResponse.json({ hasCompleted: completedRequests.length > 0, requests: completedRequests });
+        const rows = await tursoQuery(
+            "SELECT * FROM redeem_requests WHERE user_id = ? AND status = 'completed'",
+            [userId]
+        );
+        return NextResponse.json({ hasCompleted: rows.length > 0, requests: rows });
     } catch (e) {
         return NextResponse.json({ hasCompleted: false, error: String(e) });
     }
@@ -104,7 +109,7 @@ async function postRedeemStatus(req: Request) {
     try {
         const { requestId } = await req.json();
         if (!requestId) return NextResponse.json({ error: "requestId required" }, { status: 400 });
-        await db.update(redeemRequests).set({ status: "notified" }).where(eq(redeemRequests.id, requestId));
+        await tursoExecute("UPDATE redeem_requests SET status = 'notified' WHERE id = ?", [requestId]);
         return NextResponse.json({ success: true });
     } catch (e) {
         return NextResponse.json({ success: false, error: String(e) }, { status: 500 });
@@ -120,15 +125,17 @@ async function getTreasureAccess(req: Request) {
         const userId = searchParams.get("userId");
         if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
-        const settings = await db.select().from(treasureSettings).limit(1).get();
-        const config = settings || { isEnabled: 1, requirePaid4link: 0, paid4linkUrl: null };
-        const userLog = await db.select().from(userTreasureLog).where(eq(userTreasureLog.userId, userId)).get();
+        const settings = await tursoQuery("SELECT * FROM treasure_settings LIMIT 1");
+        const config = settings[0] || { is_enabled: 1, require_paid4link: 0, paid4link_url: null };
+
+        const userLog = await tursoQuery("SELECT * FROM user_treasure_log WHERE user_id = ?", [userId]);
+        const log = userLog[0];
         const today = new Date().toISOString().split("T")[0];
-        const hasAccess = userLog?.hasTreasureAccess === true && userLog?.treasureAccessDate === today;
-        const alreadySpunToday = userLog?.lastSpinDate === today;
+        const hasAccess = log?.has_treasure_access === 1 && log?.treasure_access_date === today;
+        const alreadySpunToday = log?.last_spin_date === today;
         const canSpin = hasAccess && !alreadySpunToday;
 
-        return NextResponse.json({ hasAccess, alreadySpunToday, canSpin, settings: { isEnabled: config.isEnabled, requirePaid4link: config.requirePaid4link, paid4linkUrl: config.paid4linkUrl } });
+        return NextResponse.json({ hasAccess, alreadySpunToday, canSpin, settings: { isEnabled: config.is_enabled, requirePaid4link: config.require_paid4link, paid4linkUrl: config.paid4link_url } });
     } catch (e) { return NextResponse.json({ error: String(e) }, { status: 500 }); }
 }
 
@@ -140,21 +147,27 @@ async function postTreasureAccess(req: Request) {
         const today = new Date().toISOString().split("T")[0];
 
         if (action === "setAccess") {
-            const existing = await db.select().from(userTreasureLog).where(eq(userTreasureLog.userId, userId)).get();
-            if (existing) await db.update(userTreasureLog).set({ hasTreasureAccess: true, treasureAccessDate: today }).where(eq(userTreasureLog.userId, userId));
-            else await db.insert(userTreasureLog).values({ userId, hasTreasureAccess: true, treasureAccessDate: today, lastSpinDate: null, createdAt: new Date() });
+            const existing = await tursoQuery("SELECT * FROM user_treasure_log WHERE user_id = ?", [userId]);
+            if (existing.length > 0) {
+                await tursoExecute("UPDATE user_treasure_log SET has_treasure_access = 1, treasure_access_date = ? WHERE user_id = ?", [today, userId]);
+            } else {
+                await tursoExecute("INSERT INTO user_treasure_log (user_id, has_treasure_access, treasure_access_date, created_at) VALUES (?, 1, ?, ?)", [userId, today, Date.now()]);
+            }
             return NextResponse.json({ success: true, message: "Access granted" });
         } else if (action === "recordSpin") {
-            const existing = await db.select().from(userTreasureLog).where(eq(userTreasureLog.userId, userId)).get();
-            if (existing) await db.update(userTreasureLog).set({ lastSpinDate: today }).where(eq(userTreasureLog.userId, userId));
-            else await db.insert(userTreasureLog).values({ userId, hasTreasureAccess: false, lastSpinDate: today, createdAt: new Date() });
+            const existing = await tursoQuery("SELECT * FROM user_treasure_log WHERE user_id = ?", [userId]);
+            if (existing.length > 0) {
+                await tursoExecute("UPDATE user_treasure_log SET last_spin_date = ? WHERE user_id = ?", [today, userId]);
+            } else {
+                await tursoExecute("INSERT INTO user_treasure_log (user_id, has_treasure_access, last_spin_date, created_at) VALUES (?, 0, ?, ?)", [userId, today, Date.now()]);
+            }
             return NextResponse.json({ success: true, message: "Spin recorded" });
         } else if (action === "clearAccess") {
-            await db.update(userTreasureLog).set({ hasTreasureAccess: false, treasureAccessDate: null }).where(eq(userTreasureLog.userId, userId));
+            await tursoExecute("UPDATE user_treasure_log SET has_treasure_access = 0, treasure_access_date = NULL WHERE user_id = ?", [userId]);
             return NextResponse.json({ success: true, message: "Access cleared" });
         }
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-    } catch { return NextResponse.json({ error: "Error" }, { status: 500 }); }
+    } catch (e) { return NextResponse.json({ error: String(e) }, { status: 500 }); }
 }
 
 const SEGMENTS = [
@@ -172,10 +185,11 @@ async function postSpin(req: Request) {
         const { userId } = body;
         if (!userId) return NextResponse.json({ error: "Login required" }, { status: 401 });
         const today = new Date().toISOString().split("T")[0];
-        const treasureLog = await db.select().from(userTreasureLog).where(eq(userTreasureLog.userId, userId)).get();
-        if (treasureLog && treasureLog.lastSpinDate === today) return NextResponse.json({ error: "Already spun today", alreadySpun: true }, { status: 429 });
 
-        // Spin
+        const logs = await tursoQuery("SELECT * FROM user_treasure_log WHERE user_id = ?", [userId]);
+        const treasureLog = logs[0];
+        if (treasureLog && treasureLog.last_spin_date === today) return NextResponse.json({ error: "Already spun today", alreadySpun: true }, { status: 429 });
+
         const totalWeight = SEGMENTS.reduce((sum, seg) => sum + seg.weight, 0);
         let random = Math.random() * totalWeight;
         let segmentIndex = 0;
@@ -185,8 +199,11 @@ async function postSpin(req: Request) {
         }
         const segment = SEGMENTS[segmentIndex];
 
-        if (treasureLog) await db.update(userTreasureLog).set({ lastSpinDate: today }).where(eq(userTreasureLog.userId, userId));
-        else await db.insert(userTreasureLog).values({ userId, hasTreasureAccess: true, lastSpinDate: today, createdAt: new Date() });
+        if (treasureLog) {
+            await tursoExecute("UPDATE user_treasure_log SET last_spin_date = ? WHERE user_id = ?", [today, userId]);
+        } else {
+            await tursoExecute("INSERT INTO user_treasure_log (user_id, has_treasure_access, last_spin_date, created_at) VALUES (?, 1, ?, ?)", [userId, today, Date.now()]);
+        }
 
         if (segment.rp === 0 && segment.gems === 0) {
             return NextResponse.json({ segmentIndex, gemsWon: 0, cashbackWon: 0, voucherCode: null, message: "Zonk!" });
@@ -196,9 +213,12 @@ async function postSpin(req: Request) {
         let code = "SPIN-";
         for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
 
-        await db.insert(vouchers).values({ code, valueRp: segment.rp, gemsAmount: segment.gems, cashbackAmount: segment.rp, isClaimed: false, createdAt: new Date() });
+        await tursoExecute(
+            "INSERT INTO vouchers (code, value_rp, gems_amount, cashback_amount, is_claimed, created_at) VALUES (?, ?, ?, ?, 0, ?)",
+            [code, segment.rp, segment.gems, segment.rp, Date.now()]
+        );
         return NextResponse.json({ segmentIndex, gemsWon: segment.gems, cashbackWon: segment.rp, voucherCode: code, message: "You won!" });
-    } catch { return NextResponse.json({ error: "Error" }, { status: 500 }); }
+    } catch (e) { return NextResponse.json({ error: String(e) }, { status: 500 }); }
 }
 
 // --------------------------------------------------------------------------------
@@ -209,9 +229,10 @@ async function getUserSync(req: Request) {
         const { searchParams } = new URL(req.url);
         const userId = searchParams.get("userId");
         if (!userId) return NextResponse.json({ success: false }, { status: 400 });
-        const user = await db.select().from(userProgress).where(eq(userProgress.userId, userId)).get();
+        const rows = await tursoQuery("SELECT * FROM user_progress WHERE user_id = ?", [userId]);
+        const user = rows[0];
         return user ? NextResponse.json({ success: true, user }) : NextResponse.json({ success: false }, { status: 404 });
-    } catch { return NextResponse.json({ success: false }, { status: 500 }); }
+    } catch (e) { return NextResponse.json({ success: false, error: String(e) }, { status: 500 }); }
 }
 
 async function postUserSync(req: Request) {
@@ -219,15 +240,22 @@ async function postUserSync(req: Request) {
         const body = await req.json();
         const { userId, hearts, points, isGuest, hasActiveSubscription, cashbackBalance } = body;
         if (!userId) return NextResponse.json({ success: false }, { status: 400 });
-        const existing = await db.select().from(userProgress).where(eq(userProgress.userId, userId)).get();
-        if (existing) {
-            const newCashback = cashbackBalance > 0 ? cashbackBalance : (existing.cashbackBalance || 0);
-            await db.update(userProgress).set({ hearts, points, isGuest, hasActiveSubscription, cashbackBalance: newCashback }).where(eq(userProgress.userId, userId));
+
+        const existing = await tursoQuery("SELECT * FROM user_progress WHERE user_id = ?", [userId]);
+        if (existing.length > 0) {
+            const newCashback = cashbackBalance > 0 ? cashbackBalance : (existing[0].cashback_balance || 0);
+            await tursoExecute(
+                "UPDATE user_progress SET hearts = ?, points = ?, is_guest = ?, has_active_subscription = ?, cashback_balance = ? WHERE user_id = ?",
+                [hearts, points, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, newCashback, userId]
+            );
         } else {
-            await db.insert(userProgress).values({ userId, hearts, points, isGuest, hasActiveSubscription, cashbackBalance: cashbackBalance || 0, userName: "New User", userImage: "/mascot.svg" });
+            await tursoExecute(
+                "INSERT INTO user_progress (user_id, hearts, points, is_guest, has_active_subscription, cashback_balance, user_name, user_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                [userId, hearts, points, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, cashbackBalance || 0, "New User", "/mascot.svg"]
+            );
         }
         return NextResponse.json({ success: true });
-    } catch { return NextResponse.json({ success: false }, { status: 500 }); }
+    } catch (e) { return NextResponse.json({ success: false, error: String(e) }, { status: 500 }); }
 }
 
 async function getUsersRecent() {
@@ -244,29 +272,34 @@ async function postVouchersGenerate(req: Request) {
     try {
         const body = await req.json();
         const { qty, valueRp } = body;
-        const gems = Math.floor(valueRp / 100); // Simplified logic
-        const newVouchers = [];
+        const gems = Math.floor(valueRp / 100);
+        const results = [];
         for (let i = 0; i < qty; i++) {
-            let code = "CN-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-            newVouchers.push({ code, valueRp, gemsAmount: gems, cashbackAmount: Math.floor(valueRp * 0.01), isClaimed: false, createdAt: new Date() });
+            const code = "CN-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+            const cashback = Math.floor(valueRp * 0.01);
+            await tursoExecute(
+                "INSERT INTO vouchers (code, value_rp, gems_amount, cashback_amount, is_claimed, created_at) VALUES (?, ?, ?, ?, 0, ?)",
+                [code, valueRp, gems, cashback, Date.now()]
+            );
+            results.push({ code, valueRp, gems, cashback });
         }
-        const result = await db.insert(vouchers).values(newVouchers).returning();
-        return NextResponse.json({ success: true, vouchers: result });
-    } catch { return NextResponse.json({ success: false }, { status: 500 }); }
+        return NextResponse.json({ success: true, vouchers: results });
+    } catch (e) { return NextResponse.json({ success: false, error: String(e) }, { status: 500 }); }
 }
 
 async function postVouchersRedeem(req: Request) {
     try {
         const body = await req.json();
         const { code, userId } = body;
-        const voucher = await db.select().from(vouchers).where(eq(vouchers.code, code)).get();
+        const vouchers = await tursoQuery("SELECT * FROM vouchers WHERE code = ?", [code]);
+        const voucher = vouchers[0];
         if (!voucher) return NextResponse.json({ success: false, message: "Not found" }, { status: 404 });
-        if (voucher.isClaimed) return NextResponse.json({ success: false, message: "Used" }, { status: 400 });
+        if (voucher.is_claimed) return NextResponse.json({ success: false, message: "Used" }, { status: 400 });
 
-        await db.update(vouchers).set({ isClaimed: true, claimedBy: userId, claimedAt: new Date() }).where(and(eq(vouchers.id, voucher.id), eq(vouchers.isClaimed, false)));
-        await db.update(userProgress).set({ points: sql`points + ${voucher.gemsAmount}`, cashbackBalance: sql`cashback_balance + ${voucher.cashbackAmount}` }).where(eq(userProgress.userId, userId));
-        return NextResponse.json({ success: true, gems: voucher.gemsAmount, cashback: voucher.cashbackAmount });
-    } catch { return NextResponse.json({ success: false }, { status: 500 }); }
+        await tursoExecute("UPDATE vouchers SET is_claimed = 1, claimed_by = ?, claimed_at = ? WHERE id = ?", [userId, Date.now(), voucher.id]);
+        await tursoExecute("UPDATE user_progress SET points = points + ?, cashback_balance = cashback_balance + ? WHERE user_id = ?", [voucher.gems_amount, voucher.cashback_amount, userId]);
+        return NextResponse.json({ success: true, gems: voucher.gems_amount, cashback: voucher.cashback_amount });
+    } catch (e) { return NextResponse.json({ success: false, error: String(e) }, { status: 500 }); }
 }
 
 // --------------------------------------------------------------------------------
@@ -280,13 +313,13 @@ async function postWebhookXendit(req: Request) {
             const parts = external_id.split("-");
             const userId = parts[1];
             if (parts[0] === "PRO") {
-                await db.update(userProgress).set({ hasActiveSubscription: true, points: sql`points + 1000`, hearts: 100 }).where(eq(userProgress.userId, userId));
+                await tursoExecute("UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 100 WHERE user_id = ?", [userId]);
             } else if (parts[0] === "GEMS") {
-                await db.update(userProgress).set({ points: sql`points + ${Math.floor(amount / 100)}` }).where(eq(userProgress.userId, userId));
+                await tursoExecute("UPDATE user_progress SET points = points + ? WHERE user_id = ?", [Math.floor(amount / 100), userId]);
             }
         }
         return NextResponse.json({ received: true });
-    } catch { return new NextResponse("Error", { status: 500 }); }
+    } catch (e) { return NextResponse.json({ error: String(e) }, { status: 500 }); }
 }
 
 // --------------------------------------------------------------------------------
