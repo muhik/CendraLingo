@@ -58,7 +58,7 @@ export default function Home() {
           {/* Logo */}
           <div className="flex items-center gap-2">
             <div className="relative w-8 h-8 md:w-10 md:h-10">
-              <Image src="/mascot_final.png" fill alt="Logo" className="object-contain" />
+              <Image src="/mascot_final.png" fill alt="Logo" className="object-contain" unoptimized />
             </div>
             <span className="text-xl md:text-2xl font-bold tracking-tight text-white">Cendra Lingo</span>
             {/* Removed AI Badge */}
@@ -229,6 +229,7 @@ export default function Home() {
                   height={300}
                   alt="Learning Mascot"
                   className="drop-shadow-2xl animate-bounce"
+                  unoptimized
                 />
               </div>
 
