@@ -1,7 +1,24 @@
-// Raw Turso HTTP client - bypasses libsql client issues on Cloudflare Pages
+// Raw Turso HTTP client - Cloudflare Pages compatible
+import { getRequestContext } from "@cloudflare/next-on-pages";
+
+function getEnv() {
+    try {
+        const ctx = getRequestContext();
+        return {
+            url: ctx.env.TURSO_CONNECTION_URL,
+            token: ctx.env.TURSO_AUTH_TOKEN
+        };
+    } catch {
+        // Fallback for local development
+        return {
+            url: process.env.TURSO_CONNECTION_URL,
+            token: process.env.TURSO_AUTH_TOKEN
+        };
+    }
+}
+
 export async function tursoQuery(sql: string, args: any[] = []) {
-    const url = process.env.TURSO_CONNECTION_URL;
-    const token = process.env.TURSO_AUTH_TOKEN;
+    const { url, token } = getEnv();
 
     if (!url || !token) {
         throw new Error("Database credentials missing");
@@ -43,3 +60,4 @@ export async function tursoExecute(sql: string, args: any[] = []) {
     await tursoQuery(sql, args);
     return true;
 }
+
