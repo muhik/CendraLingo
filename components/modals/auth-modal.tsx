@@ -106,20 +106,20 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose, isProFlow }:
     // Derived UI Text
     const getTitle = () => {
         if (mode === "login") return "Welcome Back!";
-        return isProFlow ? "Langganan Jawara PRO" : "Create Profile";
+        return isProFlow ? "Langganan Jawara PRO" : "Buat Akun Gratis";
     };
 
     const getDescription = () => {
         if (mode === "login") return "Login to sync your progress.";
         return isProFlow
             ? "Buat akunmu untuk menyelesaikan pembayaran Jawara PRO."
-            : "Register to get 1 Month Free Premium + 1000 Gems!";
+            : "Daftar untuk simpan progress & dapat 1000 Gems!";
     };
 
     const getButtonText = () => {
         if (isLoading) return null;
         if (mode === "login") return "LOG IN";
-        return isProFlow ? "LANJUT KE PEMBAYARAN" : "START LEARNING";
+        return isProFlow ? "LANJUT KE PEMBAYARAN" : "BUAT AKUN";
     };
 
     return (
@@ -186,7 +186,7 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose, isProFlow }:
                     {mode === "register" && !isProFlow && (
                         <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg flex items-center gap-3 text-xs text-primary font-bold">
                             <CheckCircle className="h-4 w-4" />
-                            Includes: No Ads & 1000 Bonus Gems!
+                            Bonus: 1000 Gems untuk user baru!
                         </div>
                     )}
 
