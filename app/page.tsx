@@ -385,6 +385,7 @@ export default function Home() {
         open={showAuthModal}
         setOpen={setShowAuthModal}
         onSuccess={onAuthSuccess}
+        isProFlow={pendingUpgrade} // Pass this prop
       />
     </div>
   );

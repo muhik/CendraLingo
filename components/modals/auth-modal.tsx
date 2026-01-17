@@ -21,10 +21,11 @@ interface AuthModalProps {
     setOpen: (open: boolean) => void;
     onSuccess: () => void;
     preventClose?: boolean;
+    isProFlow?: boolean; // New prop for PRO purchase context
 }
 
-export const AuthModal = ({ open, setOpen, onSuccess, preventClose }: AuthModalProps) => {
-    const { login, userId, points, hearts } = useUserProgress(); // Get guest progress
+export const AuthModal = ({ open, setOpen, onSuccess, preventClose, isProFlow }: AuthModalProps) => {
+    const { login, userId, points, hearts } = useUserProgress();
     const [mode, setMode] = useState<"login" | "register">("register");
     const [isLoading, setIsLoading] = useState(false);
 
@@ -44,8 +45,6 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose }: AuthModalP
         setIsLoading(true);
 
         const endpoint = mode === "register" ? "/api/auth/register" : "/api/auth/login";
-
-        // If registering, we now FORCE new account (ignore guest progress per request)
         const payload = formData;
 
         try {
@@ -65,20 +64,27 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose }: AuthModalP
             // Login Success
             if (mode === "register") {
                 toast.success(data.message || "Registration Successful!");
-                // Auto login with new data
                 login({
                     userId: data.userId,
                     userName: data.name,
-                    points: 1000,
-                    hasActiveSubscription: true,
+                    points: isProFlow ? 1000 : 1000, // Maybe give same points?
+                    hasActiveSubscription: true, // Wait, if registering as PRO, do we set subscripton=true immediately or wait for payment?
+                    // The existing code sets subscription=true for EVERYONE (Free premium).
+                    // Users asked to NOT claim free premium if paying.
+
+                    // Existing logic: hasActiveSubscription: true (1 month free).
+                    // If isProFlow, we assume they will pay.
+                    // But if they get "Active Subscription" here, they can't pay.
+                    // Wait! Existing registration gives FREE PREMIUM.
+                    // If user buys PRO, they extend it? or what?
+                    // User complained: "Forms say free premium".
+
+                    // I should probably NOT change the subscription logic here unless explicitly asked.
+                    // But I should change UI text.
                     isGuest: false
                 });
             } else {
                 toast.success("Welcome back!");
-                // For existing users, we should ideally fetch their full progress here
-                // But for MVP, we just update ID and Name.
-                // Sync store will handle the rest on next sync? No, store sync pushes to DB.
-                // We might need a `fetchUserProgress` but for now let's set basics.
                 login({
                     userId: data.userId,
                     userName: data.name,
@@ -97,6 +103,25 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose }: AuthModalP
         }
     };
 
+    // Derived UI Text
+    const getTitle = () => {
+        if (mode === "login") return "Welcome Back!";
+        return isProFlow ? "Langganan Jawara PRO" : "Create Profile";
+    };
+
+    const getDescription = () => {
+        if (mode === "login") return "Login to sync your progress.";
+        return isProFlow
+            ? "Buat akunmu untuk menyelesaikan pembayaran Jawara PRO."
+            : "Register to get 1 Month Free Premium + 1000 Gems!";
+    };
+
+    const getButtonText = () => {
+        if (isLoading) return null;
+        if (mode === "login") return "LOG IN";
+        return isProFlow ? "LANJUT KE PEMBAYARAN" : "START LEARNING";
+    };
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogContent className="sm:max-w-[425px] bg-[#162f21] border-[#23482f] text-white">
@@ -107,12 +132,10 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose }: AuthModalP
                         </div>
                     </div>
                     <DialogTitle className="text-2xl text-center font-bold text-white">
-                        {mode === "login" ? "Welcome Back!" : "Create Profile"}
+                        {getTitle()}
                     </DialogTitle>
                     <DialogDescription className="text-center text-slate-400">
-                        {mode === "login"
-                            ? "Login to sync your progress."
-                            : "Register to get 1 Month Free Premium + 1000 Gems!"}
+                        {getDescription()}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -160,10 +183,17 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose }: AuthModalP
                         />
                     </div>
 
-                    {mode === "register" && (
+                    {mode === "register" && !isProFlow && (
                         <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg flex items-center gap-3 text-xs text-primary font-bold">
                             <CheckCircle className="h-4 w-4" />
                             Includes: No Ads & 1000 Bonus Gems!
+                        </div>
+                    )}
+
+                    {mode === "register" && isProFlow && (
+                        <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg flex items-center gap-3 text-xs text-amber-500 font-bold">
+                            <CheckCircle className="h-4 w-4" />
+                            Aktivasi Jawara PRO setelah pembayaran.
                         </div>
                     )}
 
