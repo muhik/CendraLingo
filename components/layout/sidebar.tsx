@@ -5,7 +5,7 @@ import Image from "next/image"; // Or use Lucide icons
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Home, Store, Trophy, BookOpen, LogOut } from "lucide-react";
+import { Home, Store, Trophy, BookOpen, LogOut, Trash2 } from "lucide-react";
 import { CourseSwitcher } from "./course-switcher";
 import { useUserProgress } from "@/store/use-user-progress";
 

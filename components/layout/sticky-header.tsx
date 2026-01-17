@@ -31,6 +31,11 @@ export const StickyHeader = ({ title }: StickyHeaderProps = {}) => {
                     </div>
                     <span className="text-xl font-bold tracking-tight text-[#112217] dark:text-white">{title || "Cendra"}</span>
                 </div>
+                <UserProgress
+                    hearts={hearts}
+                    points={points}
+                    hasActiveSubscription={hasActiveSubscription}
+                />
                 {/* Mobile Menu Button could go here */}
             </div>
         </div>

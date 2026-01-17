@@ -131,6 +131,27 @@ async function getVouchers(req: Request) {
     }
 }
 
+async function getSecurityLogs(req: Request) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const page = parseInt(searchParams.get("page") || "1");
+        const limit = parseInt(searchParams.get("limit") || "20");
+        const offset = (page - 1) * limit;
+
+        const logs = await tursoQuery("SELECT * FROM security_logs ORDER BY created_at DESC LIMIT ? OFFSET ?", [limit, offset]);
+        const countResult = await tursoQuery("SELECT COUNT(*) as total FROM security_logs");
+        const totalItems = countResult[0]?.total || 0;
+        const totalPages = Math.ceil(totalItems / limit);
+
+        return NextResponse.json({
+            data: logs,
+            pagination: { page, limit, totalItems, totalPages }
+        });
+    } catch (e) {
+        return NextResponse.json({ data: [], error: String(e) }, { status: 500 });
+    }
+}
+
 // --------------------------------------------------------------------------------
 // POST HANDLERS
 // --------------------------------------------------------------------------------
@@ -210,6 +231,23 @@ async function postUsersUpdate(req: Request) {
     }
 }
 
+async function deleteUser(req: Request) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const userId = searchParams.get("userId");
+        if (!userId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+
+        await tursoExecute("DELETE FROM user_progress WHERE user_id = ?", [userId]);
+        // Also clean up related data if needed (vouchers, redemptions) - strictly speaking we should cascade,
+        // but for now deleting the user progress is the main goal.
+        // Optional: DELETE FROM vouchers WHERE claimed_by = ?
+
+        return NextResponse.json({ success: true });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
+    }
+}
+
 // --------------------------------------------------------------------------------
 // MAIN DISPATCHER
 // --------------------------------------------------------------------------------
@@ -226,6 +264,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
         case "treasure-settings": return getTreasureSettings();
         case "users": return getUsers();
         case "vouchers": return getVouchers(req);
+        case "security/logs": return getSecurityLogs(req);
         default: return new NextResponse("Not Found", { status: 404 });
     }
 }
@@ -239,6 +278,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
         case "redeem/update": return postRedeemUpdate(req);
         case "treasure-settings": return postTreasureSettings(req);
         case "users/update": return postUsersUpdate(req);
+        default: return new NextResponse("Not Found", { status: 404 });
+    }
+}
+
+export async function DELETE(req: Request, { params }: { params: Promise<{ slug: string[] }> }) {
+    const slug = (await params).slug;
+    const path = slug.join("/");
+
+    switch (path) {
+        case "users": return deleteUser(req);
         default: return new NextResponse("Not Found", { status: 404 });
     }
 }

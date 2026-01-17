@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { tursoQuery, tursoExecute } from "@/db/turso-http";
-import { createInvoice } from "@/lib/xendit";
+
+import { Security, SecurityEvent, SecuritySeverity } from "@/lib/security";
+
 export const runtime = "edge";
 
 // --------------------------------------------------------------------------------
@@ -24,6 +26,11 @@ async function postFeedback(req: Request) {
         const body = await req.json();
         const { userId, userName, message, type } = body;
         if (!userId || !message) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+
+        // Rate limit feedback: 1 per minute
+        const allowed = await Security.checkRateLimit(`FEEDBACK:${userId}`, 1, 60);
+        if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
         await tursoExecute(
             "INSERT INTO feedbacks (user_id, user_name, message, type, created_at) VALUES (?, ?, ?, ?, ?)",
             [userId, userName || "Anonymous", message, type || 'saran', new Date().toISOString()]
@@ -37,6 +44,13 @@ async function postFeedback(req: Request) {
 // --------------------------------------------------------------------------------
 // LOGIC: PURCHASE (Xendit)
 // --------------------------------------------------------------------------------
+import { Midtrans } from "@/lib/midtrans";
+
+// ... (other imports remain, but remove xendit)
+
+// --------------------------------------------------------------------------------
+// LOGIC: PURCHASE (Midtrans)
+// --------------------------------------------------------------------------------
 async function postPurchase(req: Request) {
     try {
         const body = await req.json();
@@ -45,25 +59,31 @@ async function postPurchase(req: Request) {
 
         let amount = 0;
         let description = "";
-        let externalIdPrefix = "";
+        let orderIdPrefix = "";
 
-        if (planType === "PRO_MONTHLY") { amount = 49000; description = "Upgrade Jawara PRO (1 Month)"; externalIdPrefix = "PRO"; }
-        else if (planType === "GEMS_TOPUP") { amount = customAmount; description = customDescription || "Top Up Gems"; externalIdPrefix = "GEMS"; }
+        if (planType === "PRO_MONTHLY") { amount = 49000; description = "Upgrade Jawara PRO (1 Month)"; orderIdPrefix = "PRO"; }
+        else if (planType === "GEMS_TOPUP") { amount = customAmount; description = customDescription || "Top Up Gems"; orderIdPrefix = "GEMS"; }
         else { return new NextResponse("Invalid Plan Type", { status: 400 }); }
 
-        const externalId = `${externalIdPrefix}-${userId}-${Date.now()}`;
-        let invoiceUrl = "";
+        const orderId = `${orderIdPrefix}-${userId}-${Date.now()}`;
 
-        if (process.env.XENDIT_SECRET_KEY) {
-            const invoice = await createInvoice({
-                externalId, amount, description, payerEmail: "user@example.com",
-                successRedirectUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3005"}/shop?payment=success`,
-            });
-            invoiceUrl = invoice.invoiceUrl;
-        } else {
-            invoiceUrl = "https://checkout-staging.xendit.co/web/mock-payment";
-        }
-        return NextResponse.json({ url: invoiceUrl, externalId });
+        // Use Midtrans Snap
+        // Ideally we get user details from DB, but for now we use defaults or placeholders
+        const transaction = await Midtrans.createTransaction({
+            orderId,
+            amount,
+            description,
+            customerDetails: {
+                firstName: "User " + userId.substring(0, 5),
+                email: "user@example.com", // Should be real email from auth
+                phone: "08123456789"
+            }
+        });
+
+        // Midtrans returns { token, redirect_url }
+        // Frontend expects { url }
+        return NextResponse.json({ url: transaction.redirect_url, externalId: orderId });
+
     } catch (e) {
         return new NextResponse(JSON.stringify({ error: String(e) }), { status: 500 });
     }
@@ -79,6 +99,10 @@ async function postRedeemRequest(req: Request) {
         if (!userId || !rupiahAmount || !paymentMethod || !accountNumber) return NextResponse.json({ error: "Data tidak lengkap" }, { status: 400 });
         if (rupiahAmount < 1) return NextResponse.json({ error: "Minimum penarikan Rp 1" }, { status: 400 });
         if (paymentMethod.toUpperCase() !== "DANA") return NextResponse.json({ error: "Hanya DANA" }, { status: 400 });
+
+        // Security: Check rate limit for requests
+        const allowed = await Security.checkRateLimit(`REDEEM:${userId}`, 1, 300); // 1 request per 5 mins
+        if (!allowed) return NextResponse.json({ error: "Too many requests. Please wait." }, { status: 429 });
 
         await tursoExecute(
             "INSERT INTO redeem_requests (user_id, user_name, gems_amount, rupiah_amount, payment_method, account_number, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -146,6 +170,10 @@ async function postTreasureAccess(req: Request) {
         if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
         const today = new Date().toISOString().split("T")[0];
 
+        // Security: Rate limit actions
+        const allowed = await Security.checkRateLimit(`TREASURE_ACCESS:${userId}`, 10, 60);
+        if (!allowed) return NextResponse.json({ error: "Too many attempts" }, { status: 429 });
+
         if (action === "setAccess") {
             const existing = await tursoQuery("SELECT * FROM user_treasure_log WHERE user_id = ?", [userId]);
             if (existing.length > 0) {
@@ -155,8 +183,16 @@ async function postTreasureAccess(req: Request) {
             }
             return NextResponse.json({ success: true, message: "Access granted" });
         } else if (action === "recordSpin") {
-            const existing = await tursoQuery("SELECT * FROM user_treasure_log WHERE user_id = ?", [userId]);
-            if (existing.length > 0) {
+            // This action is usually internal or redundant if postSpin handles it, but keeping for compatibility
+            // Adding double check
+            const logs = await tursoQuery("SELECT * FROM user_treasure_log WHERE user_id = ?", [userId]);
+            const log = logs[0];
+            if (log && log.last_spin_date === today) {
+                await Security.log(userId, "Unknown", SecurityEvent.SPIN_ABUSE, "Client sent recordSpin but already spun", SecuritySeverity.MEDIUM);
+                return NextResponse.json({ error: "Already spun" }, { status: 400 });
+            }
+
+            if (logs.length > 0) {
                 await tursoExecute("UPDATE user_treasure_log SET last_spin_date = ? WHERE user_id = ?", [today, userId]);
             } else {
                 await tursoExecute("INSERT INTO user_treasure_log (user_id, has_treasure_access, last_spin_date, created_at) VALUES (?, 0, ?, ?)", [userId, today, Date.now()]);
@@ -186,9 +222,17 @@ async function postSpin(req: Request) {
         if (!userId) return NextResponse.json({ error: "Login required" }, { status: 401 });
         const today = new Date().toISOString().split("T")[0];
 
+        // Security 1: Rate Limit
+        const allowed = await Security.checkRateLimit(`SPIN:${userId}`, 1, 10);
+        if (!allowed) return NextResponse.json({ error: "Too fast" }, { status: 429 });
+
+        // Security 2: Double Spin check
         const logs = await tursoQuery("SELECT * FROM user_treasure_log WHERE user_id = ?", [userId]);
         const treasureLog = logs[0];
-        if (treasureLog && treasureLog.last_spin_date === today) return NextResponse.json({ error: "Already spun today", alreadySpun: true }, { status: 429 });
+        if (treasureLog && treasureLog.last_spin_date === today) {
+            await Security.log(userId, treasureLog.user_name || "Unknown", SecurityEvent.SPIN_ABUSE, "Attempted double spin", SecuritySeverity.HIGH);
+            return NextResponse.json({ error: "Already spun today", alreadySpun: true }, { status: 429 });
+        }
 
         const totalWeight = SEGMENTS.reduce((sum, seg) => sum + seg.weight, 0);
         let random = Math.random() * totalWeight;
@@ -242,17 +286,55 @@ async function postUserSync(req: Request) {
         if (!userId) return NextResponse.json({ success: false }, { status: 400 });
 
         const existing = await tursoQuery("SELECT * FROM user_progress WHERE user_id = ?", [userId]);
+
         if (existing.length > 0) {
+            const oldPoints = existing[0].points || 0;
+            const diff = points - oldPoints;
             const newCashback = cashbackBalance > 0 ? cashbackBalance : (existing[0].cashback_balance || 0);
+
+            // SECURITY: VALIDATE POINTS DELTA
+            // Allow max 200 points increase per sync. 200 is already generous for a single lesson.
+            if (diff > 200) {
+                await Security.log(userId, existing[0].user_name, SecurityEvent.GEMS_MANIPULATION, `Suspicious points jump: +${diff}`, SecuritySeverity.CRITICAL);
+                // DENY THE UPDATE
+                return NextResponse.json({ success: false, error: "Sync rejected: Suspicious activity detected." }, { status: 403 });
+            }
+
+            // Also check for huge cashback jumps (assuming cashback shouldn't increase via sync, only via vouchers)
+            const oldCashback = existing[0].cashback_balance || 0;
+            if (newCashback > oldCashback) {
+                // Cashback should only increase via specific endpoints (spin/voucher), not sync
+                // We'll reset it to old value
+                await Security.log(userId, existing[0].user_name, SecurityEvent.GEMS_MANIPULATION, `User tried to set cashback via sync: ${oldCashback} -> ${newCashback}`, SecuritySeverity.HIGH);
+                // Do not update cashback
+                await tursoExecute(
+                    "UPDATE user_progress SET hearts = ?, points = ?, is_guest = ?, has_active_subscription = ? WHERE user_id = ?",
+                    [hearts, points, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, userId]
+                );
+                return NextResponse.json({ success: true }); // Partial success (ignored cashback)
+            }
+
             await tursoExecute(
                 "UPDATE user_progress SET hearts = ?, points = ?, is_guest = ?, has_active_subscription = ?, cashback_balance = ? WHERE user_id = ?",
                 [hearts, points, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, newCashback, userId]
             );
         } else {
-            await tursoExecute(
-                "INSERT INTO user_progress (user_id, hearts, points, is_guest, has_active_subscription, cashback_balance, user_name, user_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                [userId, hearts, points, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, cashbackBalance || 0, "New User", "/mascot.svg"]
-            );
+            // New user Sync
+            // Ensure they don't start with 99999 points
+            if (points > 1000) {
+                await Security.log(userId, "New User", SecurityEvent.GEMS_MANIPULATION, `New user userSync with high points: ${points}`, SecuritySeverity.HIGH);
+                // Reset to 0
+                const safePoints = 0;
+                await tursoExecute(
+                    "INSERT INTO user_progress (user_id, hearts, points, is_guest, has_active_subscription, cashback_balance, user_name, user_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    [userId, hearts, safePoints, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, cashbackBalance || 0, "New User", "/mascot.svg"]
+                );
+            } else {
+                await tursoExecute(
+                    "INSERT INTO user_progress (user_id, hearts, points, is_guest, has_active_subscription, cashback_balance, user_name, user_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    [userId, hearts, points, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, cashbackBalance || 0, "New User", "/mascot.svg"]
+                );
+            }
         }
         return NextResponse.json({ success: true });
     } catch (e) { return NextResponse.json({ success: false, error: String(e) }, { status: 500 }); }
@@ -291,6 +373,14 @@ async function postVouchersRedeem(req: Request) {
     try {
         const body = await req.json();
         const { code, userId } = body;
+
+        // Security: Rate limit attempts (5 per 15 minutes)
+        const allowed = await Security.checkRateLimit(`VOUCHER_ATTEMPT:${userId}`, 5, 900);
+        if (!allowed) {
+            await Security.log(userId, "Unknown", SecurityEvent.VOUCHER_BRUTEFORCE, "Rate limit exceeded for voucher redemption", SecuritySeverity.MEDIUM);
+            return NextResponse.json({ error: "Too many attempts. Blocked for 15 minutes." }, { status: 429 });
+        }
+
         const vouchers = await tursoQuery("SELECT * FROM vouchers WHERE code = ?", [code]);
         const voucher = vouchers[0];
         if (!voucher) return NextResponse.json({ success: false, message: "Not found" }, { status: 404 });

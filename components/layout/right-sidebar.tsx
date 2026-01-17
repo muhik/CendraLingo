@@ -6,12 +6,13 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Zap, Trophy, Target, Gem } from "lucide-react";
 import { useUserProgress } from "@/store/use-user-progress";
+import { UserProgress } from "@/components/learn/user-progress";
 
 import { useState, useEffect } from "react";
 
 export const RightSidebar = () => {
     const router = useRouter();
-    const { hasActiveSubscription, points, isGuest, userId } = useUserProgress();
+    const { hasActiveSubscription, points, isGuest, userId, hearts } = useUserProgress();
     const [canSpin, setCanSpin] = useState(false);
     const [paid4linkUrl, setPaid4linkUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -73,6 +74,15 @@ export const RightSidebar = () => {
 
     return (
         <div className="hidden lg:flex w-[350px] flex-col gap-6 p-6 sticky top-0 h-screen overflow-y-auto no-scrollbar border-l border-[#23482f] bg-background-dark">
+
+            {/* Top Bar Stats */}
+            <div className="flex items-center justify-between mb-4">
+                <UserProgress
+                    hearts={hearts}
+                    points={points}
+                    hasActiveSubscription={hasActiveSubscription}
+                />
+            </div>
 
             {/* Free Gems / Treasure Chest Widget */}
             {!isLoading && (
