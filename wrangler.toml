@@ -1,6 +1,7 @@
 name = "cendralingo"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".open-next"
 
 # OpenNext output directory
 main = ".open-next/worker.js"
