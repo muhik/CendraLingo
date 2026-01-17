@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "pages:build": "npx @opennextjs/cloudflare build && node -e \"require('fs').renameSync('.open-next/worker.js', '.open-next/_worker.js'); const fs=require('fs'); const path=require('path'); const assetsDir='.open-next/assets'; if(fs.existsSync(assetsDir)){ fs.cpSync(assetsDir, '.open-next', {recursive: true}); fs.rmSync(assetsDir, {recursive: true, force: true}); }\"",
+    "pages:build": "npx @opennextjs/cloudflare build && node scripts/postbuild.js",
     "pages:deploy": "npm run pages:build && wrangler pages deploy",
     "pages:dev": "npm run pages:build && wrangler pages dev"
   },
