@@ -23,6 +23,11 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
+
+  // Disable image optimization for Cloudflare Pages (OpenNext)
+  images: {
+    unoptimized: true,
+  },
 };
 
 export default nextConfig;
