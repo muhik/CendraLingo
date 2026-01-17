@@ -104,8 +104,8 @@ async function handleRegister(req: Request) {
             const guestUsers = await tursoQuery("SELECT * FROM users WHERE id = ? AND role = 'guest'", [guestId]);
             if (guestUsers.length > 0) {
                 await tursoExecute("UPDATE users SET name = ?, email = ?, password = ?, role = 'user' WHERE id = ?", [name, email, hashedPassword, guestId]);
-                await tursoExecute("UPDATE user_progress SET user_name = ?, points = points + 10, hearts = ?, is_guest = 0, has_active_subscription = 1, subscription_ends_at = ? WHERE user_id = ?",
-                    [name, guestHearts !== undefined ? guestHearts : 5, expiresAt, guestId]);
+                await tursoExecute("UPDATE user_progress SET user_name = ?, points = points + 10, hearts = ?, is_guest = 0, has_active_subscription = 0, subscription_ends_at = NULL WHERE user_id = ?",
+                    [name, guestHearts !== undefined ? guestHearts : 5, guestId]);
                 return NextResponse.json({ success: true, userId: guestId, name, message: "Account created! 10 Gems Bonus Added!" });
             }
         }
@@ -113,7 +113,7 @@ async function handleRegister(req: Request) {
         await tursoExecute("INSERT INTO users (id, name, email, password, role, created_at) VALUES (?, ?, ?, ?, ?, ?)",
             [userId, name, email, hashedPassword, "user", now]);
         await tursoExecute("INSERT INTO user_progress (user_id, user_name, user_image, hearts, points, is_guest, has_active_subscription, subscription_ends_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            [userId, name, "/mascot.svg", 5, 10, 0, 1, expiresAt]);
+            [userId, name, "/mascot.svg", 5, 10, 0, 0, null]);
 
         return NextResponse.json({ success: true, userId, name, message: "Account created! 10 Gems Bonus Added!" });
     } catch (e) {
