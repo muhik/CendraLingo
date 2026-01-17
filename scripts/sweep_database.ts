@@ -44,7 +44,7 @@ async function sweepDatabase() {
         try {
             // Get row count
             const countResult = await client.execute(`SELECT COUNT(*) as count FROM ${table}`);
-            const count = countResult.rows[0]?.count || 0;
+            const count = Number(countResult.rows[0]?.count ?? 0);
             console.log(`  Total rows: ${count}`);
 
             if (count > 0) {
