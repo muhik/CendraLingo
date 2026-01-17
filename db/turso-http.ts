@@ -1,25 +1,7 @@
 // Raw Turso HTTP client - Cloudflare Pages compatible
-import { getRequestContext } from "@cloudflare/next-on-pages";
-
-function getEnv() {
-    try {
-        const ctx = getRequestContext();
-        const env = ctx.env as any;
-        return {
-            url: env.TURSO_CONNECTION_URL,
-            token: env.TURSO_AUTH_TOKEN
-        };
-    } catch {
-        // Fallback for local development
-        return {
-            url: process.env.TURSO_CONNECTION_URL,
-            token: process.env.TURSO_AUTH_TOKEN
-        };
-    }
-}
-
 export async function tursoQuery(sql: string, args: any[] = []) {
-    const { url, token } = getEnv();
+    const url = process.env.TURSO_CONNECTION_URL;
+    const token = process.env.TURSO_AUTH_TOKEN;
 
     if (!url || !token) {
         throw new Error("Database credentials missing");
@@ -61,4 +43,3 @@ export async function tursoExecute(sql: string, args: any[] = []) {
     await tursoQuery(sql, args);
     return true;
 }
-
