@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "pages:build": "npx @opennextjs/cloudflare build",
+    "pages:build": "npx @opennextjs/cloudflare build && node -e \"require('fs').renameSync('.open-next/worker.js', '.open-next/_worker.js')\"",
     "pages:deploy": "npm run pages:build && wrangler pages deploy",
     "pages:dev": "npm run pages:build && wrangler pages dev"
   },
