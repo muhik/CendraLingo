@@ -113,7 +113,7 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose, isProFlow }:
         if (mode === "login") return "Login to sync your progress.";
         return isProFlow
             ? "Buat akunmu untuk menyelesaikan pembayaran Jawara PRO."
-            : "Daftar untuk simpan progress & dapat 1000 Gems!";
+            : "Daftar untuk simpan progress & dapat 10 Gems!";
     };
 
     const getButtonText = () => {
@@ -128,7 +128,7 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose, isProFlow }:
                 <DialogHeader>
                     <div className="flex justify-center mb-4">
                         <div className="relative w-[80px] h-[80px]">
-                            <Image src="/mascot_headset.png" alt="Mascot" fill className="object-contain" />
+                            <Image src="/cendra_mascot.png" alt="Mascot" fill className="object-contain" />
                         </div>
                     </div>
                     <DialogTitle className="text-2xl text-center font-bold text-white">
@@ -186,7 +186,7 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose, isProFlow }:
                     {mode === "register" && !isProFlow && (
                         <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg flex items-center gap-3 text-xs text-primary font-bold">
                             <CheckCircle className="h-4 w-4" />
-                            Bonus: 1000 Gems untuk user baru!
+                            Bonus: 10 Gems untuk user baru!
                         </div>
                     )}
 
