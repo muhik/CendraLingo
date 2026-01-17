@@ -4,9 +4,10 @@ import { getRequestContext } from "@cloudflare/next-on-pages";
 function getEnv() {
     try {
         const ctx = getRequestContext();
+        const env = ctx.env as any;
         return {
-            url: ctx.env.TURSO_CONNECTION_URL,
-            token: ctx.env.TURSO_AUTH_TOKEN
+            url: env.TURSO_CONNECTION_URL,
+            token: env.TURSO_AUTH_TOKEN
         };
     } catch {
         // Fallback for local development
