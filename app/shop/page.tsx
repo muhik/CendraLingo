@@ -194,12 +194,12 @@ function ShopContent() {
                 // Redirect to Xendit
                 window.location.href = data.url;
             } else {
-                toast.error("Gagal membuat pembayaran. Coba lagi.");
+                toast.error(`Gagal: ${data.error || "Pembayaran gagal"}`);
                 setIsProcessing(false);
             }
         } catch (error) {
             console.error(error);
-            toast.error("Terjadi kesalahan sistem.");
+            toast.error(`Error: ${String(error)}`);
             setIsProcessing(false);
         }
     };
