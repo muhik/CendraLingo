@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { tursoQuery, tursoQueryOne, tursoExecute } from "@/db/turso-http";
 import { cookies } from "next/headers";
-import { v4 as uuidv4 } from "uuid";
+
 export const runtime = "edge";
 
 // --------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ async function handleGuest() {
             if (users.length > 0) return NextResponse.json({ success: true, userId: existingGuestId, message: "Resuming existing guest session" });
         }
 
-        const userId = uuidv4();
+        const userId = crypto.randomUUID();
         const now = Date.now();
         const defaultName = `Guest-${userId.substring(0, 6)}`;
         const guestEmail = `${userId}@guest.com`;
@@ -96,7 +96,7 @@ async function handleRegister(req: Request) {
         if (existingUsers.length > 0) return NextResponse.json({ message: "Email already registered" }, { status: 409 });
 
         const hashedPassword = await hashPassword(password);
-        const userId = uuidv4();
+        const userId = crypto.randomUUID();
         const now = Date.now();
         const expiresAt = now + 30 * 24 * 60 * 60 * 1000;
 
