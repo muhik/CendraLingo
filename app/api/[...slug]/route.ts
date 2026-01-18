@@ -395,19 +395,59 @@ async function postVouchersRedeem(req: Request) {
 // --------------------------------------------------------------------------------
 // LOGIC: WEBHOOKS
 // --------------------------------------------------------------------------------
-async function postWebhookXendit(req: Request) {
+async function postWebhookMidtrans(req: Request) {
     try {
         const body = await req.json();
-        const { status, external_id, amount } = body;
-        if (status === "PAID") {
-            const parts = external_id.split("-");
+        const { order_id, status_code, gross_amount, transaction_status, signature_key } = body;
+
+        // 1. Signature Verification
+        const serverKey = process.env.MIDTRANS_SERVER_KEY;
+        if (!serverKey) return NextResponse.json({ error: "Server Key missing" }, { status: 500 });
+
+        const rawString = order_id + status_code + gross_amount + serverKey;
+        const encoder = new TextEncoder();
+        const data = encoder.encode(rawString);
+        const hashBuffer = await crypto.subtle.digest("SHA-512", data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const computedSignature = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+
+        if (computedSignature !== signature_key) {
+            return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
+        }
+
+        // 2. Handle Status
+        // capture (Credit Card), settlement (Bank/All)
+        if (transaction_status === "capture" || transaction_status === "settlement") {
+            const parts = order_id.split("-");
+            // format: TYPE-userId-timestamp
+            // valid: PRO-user123-1725555... or GEMS-user123-1725555...
+
+            if (parts.length < 3) return NextResponse.json({ received: true }); // Ignore weird IDs
+
             const userId = parts[1];
+
             if (parts[0] === "PRO") {
+                // Jawara PRO: 1000 Gems + 5 Hearts + Active Subscription
                 await tursoExecute("UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 5 WHERE user_id = ?", [userId]);
             } else if (parts[0] === "GEMS") {
-                await tursoExecute("UPDATE user_progress SET points = points + ? WHERE user_id = ?", [Math.floor(amount / 100), userId]);
+                // Gems Topup: Just add points (amount is strict from shop, calculated here approx)
+                // Midtrans sends gross_amount "10000.00". Need to flooring.
+                const paidRp = Math.floor(Number(gross_amount));
+
+                // Map Rp to Gems based on Shop Logic (Simple approximation or lookup)
+                // 1000 -> 10 Gems
+                // 5000 -> 55 Gems (Bonus)
+                // 10000 -> 120 Gems (Bonus)
+
+                let gemsToAdd = 0;
+                if (paidRp >= 10000) gemsToAdd = 120;
+                else if (paidRp >= 5000) gemsToAdd = 55;
+                else gemsToAdd = 10; // Default min
+
+                await tursoExecute("UPDATE user_progress SET points = points + ? WHERE user_id = ?", [gemsToAdd, userId]);
             }
         }
+
         return NextResponse.json({ received: true });
     } catch (e) { return NextResponse.json({ error: String(e) }, { status: 500 }); }
 }
@@ -441,7 +481,7 @@ export async function POST(req: Request, context: { params: Promise<{ slug: stri
         case "user/sync": return postUserSync(req);
         case "vouchers/generate": return postVouchersGenerate(req);
         case "vouchers/redeem": return postVouchersRedeem(req);
-        case "webhooks/xendit": return postWebhookXendit(req);
+        case "webhooks/midtrans": return postWebhookMidtrans(req);
         default: return new NextResponse("Not Found", { status: 404 });
     }
 }
