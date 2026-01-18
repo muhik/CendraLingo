@@ -67,22 +67,14 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose, isProFlow }:
                 login({
                     userId: data.userId,
                     userName: data.name,
-                    points: isProFlow ? 1000 : 1000, // Maybe give same points?
-                    hasActiveSubscription: true, // Wait, if registering as PRO, do we set subscripton=true immediately or wait for payment?
-                    // The existing code sets subscription=true for EVERYONE (Free premium).
-                    // Users asked to NOT claim free premium if paying.
-
-                    // Existing logic: hasActiveSubscription: true (1 month free).
-                    // If isProFlow, we assume they will pay.
-                    // But if they get "Active Subscription" here, they can't pay.
-                    // Wait! Existing registration gives FREE PREMIUM.
-                    // If user buys PRO, they extend it? or what?
-                    // User complained: "Forms say free premium".
-
-                    // I should probably NOT change the subscription logic here unless explicitly asked.
-                    // But I should change UI text.
                     isGuest: false
                 });
+
+                // FETCH REAL DATA FROM SERVER IMMEDIATELY
+                // We use a small timeout to ensure the DB write has propagated if using eventually consistent DBs (good practice)
+                setTimeout(() => {
+                    useUserProgress.getState().refreshUserData();
+                }, 100);
             } else {
                 toast.success("Welcome back!");
                 login({

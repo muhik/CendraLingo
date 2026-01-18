@@ -44,7 +44,7 @@ export const useUserProgress = create<UserProgressState>()(
         (set, get) => ({
             userId: uuidv4(),
             streak: 1,
-            hearts: 5,
+            hearts: 3,
             points: 10,
             cashbackBalance: 0,
             hasActiveSubscription: false,
