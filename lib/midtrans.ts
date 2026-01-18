@@ -17,9 +17,15 @@ export class Midtrans {
     private static IS_PRODUCTION = false;
 
     static getBaseUrl() {
-        return this.IS_PRODUCTION
-            ? "https://app.midtrans.com/snap/v1/transactions"
-            : "https://app.sandbox.midtrans.com/snap/v1/transactions";
+        // Smart Detection: Check key prefix
+        const serverKey = process.env.MIDTRANS_SERVER_KEY || "";
+        const isSandboxKey = serverKey.startsWith("SB-");
+
+        // If it starts with SB-, force Sandbox. Otherwise, assume Production (or user error, but try Prod).
+        // Overrides the static IS_PRODUCTION flag if needed.
+        return isSandboxKey
+            ? "https://app.sandbox.midtrans.com/snap/v1/transactions"
+            : "https://app.midtrans.com/snap/v1/transactions";
     }
 
     static async createTransaction(params: CreateTransactionParams) {

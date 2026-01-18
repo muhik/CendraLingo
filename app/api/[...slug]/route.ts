@@ -91,7 +91,10 @@ async function postPurchase(req: Request) {
         return NextResponse.json({ url: transaction.redirect_url, externalId: orderId });
 
     } catch (e) {
-        return new NextResponse(JSON.stringify({ error: String(e) }), { status: 500 });
+        return new NextResponse(JSON.stringify({ error: String(e) }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+        });
     }
 }
 
