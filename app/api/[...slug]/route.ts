@@ -51,9 +51,6 @@ import { Midtrans } from "@/lib/midtrans";
 // --------------------------------------------------------------------------------
 // LOGIC: PURCHASE (Midtrans)
 // --------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------
-// LOGIC: PURCHASE (Midtrans)
-// --------------------------------------------------------------------------------
 async function postPurchase(req: Request) {
     try {
         const body = await req.json();
@@ -68,26 +65,21 @@ async function postPurchase(req: Request) {
         else if (planType === "GEMS_TOPUP") { amount = customAmount; description = customDescription || "Top Up Gems"; typeCode = "G"; }
         else { return new NextResponse("Invalid Plan Type", { status: 400 }); }
 
-        // Security: Order ID Max 50 chars.
-        // Format: TYPE_UUID_TIMESTAMP(base36)
-        // UUID=36 chars, TYPE=1, TIME=~8. Total ~47 chars.
-        // using '_' separator because UUID has '-'
+        // Order ID Max 50 chars. Format: TYPE_UUID_TIMESTAMP(base36)
         const timestamp = Date.now().toString(36).toUpperCase();
         const orderId = `${typeCode}_${userId}_${timestamp}`;
 
-        // Use Midtrans Snap
         const transaction = await Midtrans.createTransaction({
             orderId,
             amount,
             description,
             customerDetails: {
                 firstName: "User",
-                email: "user@cendralingo.id", // Dummy email needed
+                email: "user@cendralingo.id",
                 phone: "08123456789"
             }
         });
 
-        // Midtrans returns { token, redirect_url }
         return NextResponse.json({ url: transaction.redirect_url, externalId: orderId });
 
     } catch (e) {
@@ -98,7 +90,308 @@ async function postPurchase(req: Request) {
     }
 }
 
-// ... (Redeem Logic remains same)
+// --------------------------------------------------------------------------------
+// LOGIC: REDEEM
+// --------------------------------------------------------------------------------
+async function postRedeemRequest(req: Request) {
+    try {
+        const body = await req.json();
+        const { userId, userName, rupiahAmount, paymentMethod, accountNumber } = body;
+        if (!userId || !rupiahAmount || !paymentMethod || !accountNumber) return NextResponse.json({ error: "Data tidak lengkap" }, { status: 400 });
+        if (rupiahAmount < 1) return NextResponse.json({ error: "Minimum penarikan Rp 1" }, { status: 400 });
+        if (paymentMethod.toUpperCase() !== "DANA") return NextResponse.json({ error: "Hanya DANA" }, { status: 400 });
+
+        // Security: Check rate limit for requests
+        const allowed = await Security.checkRateLimit(`REDEEM:${userId}`, 1, 300); // 1 request per 5 mins
+        if (!allowed) return NextResponse.json({ error: "Too many requests. Please wait." }, { status: 429 });
+
+        await tursoExecute(
+            "INSERT INTO redeem_requests (user_id, user_name, gems_amount, rupiah_amount, payment_method, account_number, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [userId, userName || "User", 0, rupiahAmount, paymentMethod.toUpperCase(), accountNumber, "pending", Date.now()]
+        );
+        return NextResponse.json({ success: true, message: "Request sent", rupiahAmount });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
+    }
+}
+
+async function getRedeemStatus(req: Request) {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+    if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+    try {
+        const rows = await tursoQuery(
+            "SELECT * FROM redeem_requests WHERE user_id = ? AND status = 'completed'",
+            [userId]
+        );
+        return NextResponse.json({ hasCompleted: rows.length > 0, requests: rows });
+    } catch (e) {
+        return NextResponse.json({ hasCompleted: false, error: String(e) });
+    }
+}
+
+async function postRedeemStatus(req: Request) {
+    try {
+        const { requestId } = await req.json();
+        if (!requestId) return NextResponse.json({ error: "requestId required" }, { status: 400 });
+        await tursoExecute("UPDATE redeem_requests SET status = 'notified' WHERE id = ?", [requestId]);
+        return NextResponse.json({ success: true });
+    } catch (e) {
+        return NextResponse.json({ success: false, error: String(e) }, { status: 500 });
+    }
+}
+
+// --------------------------------------------------------------------------------
+// LOGIC: TREASURE
+// --------------------------------------------------------------------------------
+async function getTreasureAccess(req: Request) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const userId = searchParams.get("userId");
+        if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+
+        const settings = await tursoQuery("SELECT * FROM treasure_settings LIMIT 1");
+        const config = settings[0] || { is_enabled: 1, require_paid4link: 0, paid4link_url: null };
+
+        const userLog = await tursoQuery("SELECT * FROM user_treasure_log WHERE user_id = ?", [userId]);
+        const log = userLog[0];
+        const today = new Date().toISOString().split("T")[0];
+        const hasAccess = log?.has_treasure_access === 1 && log?.treasure_access_date === today;
+        const alreadySpunToday = log?.last_spin_date === today;
+        const canSpin = hasAccess && !alreadySpunToday;
+
+        return NextResponse.json({ hasAccess, alreadySpunToday, canSpin, settings: { isEnabled: config.is_enabled, requirePaid4link: config.require_paid4link, paid4linkUrl: config.paid4link_url } });
+    } catch (e) { return NextResponse.json({ error: String(e) }, { status: 500 }); }
+}
+
+async function postTreasureAccess(req: Request) {
+    try {
+        const body = await req.json();
+        const { userId, action } = body;
+        if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+        const today = new Date().toISOString().split("T")[0];
+
+        // Security: Rate limit actions
+        const allowed = await Security.checkRateLimit(`TREASURE_ACCESS:${userId}`, 10, 60);
+        if (!allowed) return NextResponse.json({ error: "Too many attempts" }, { status: 429 });
+
+        if (action === "setAccess") {
+            const existing = await tursoQuery("SELECT * FROM user_treasure_log WHERE user_id = ?", [userId]);
+            if (existing.length > 0) {
+                await tursoExecute("UPDATE user_treasure_log SET has_treasure_access = 1, treasure_access_date = ? WHERE user_id = ?", [today, userId]);
+            } else {
+                await tursoExecute("INSERT INTO user_treasure_log (user_id, has_treasure_access, treasure_access_date, created_at) VALUES (?, 1, ?, ?)", [userId, today, Date.now()]);
+            }
+            return NextResponse.json({ success: true, message: "Access granted" });
+        } else if (action === "recordSpin") {
+            // This action is usually internal or redundant if postSpin handles it, but keeping for compatibility
+            // Adding double check
+            const logs = await tursoQuery("SELECT * FROM user_treasure_log WHERE user_id = ?", [userId]);
+            const log = logs[0];
+            if (log && log.last_spin_date === today) {
+                await Security.log(userId, "Unknown", SecurityEvent.SPIN_ABUSE, "Client sent recordSpin but already spun", SecuritySeverity.MEDIUM);
+                return NextResponse.json({ error: "Already spun" }, { status: 400 });
+            }
+
+            if (logs.length > 0) {
+                await tursoExecute("UPDATE user_treasure_log SET last_spin_date = ? WHERE user_id = ?", [today, userId]);
+            } else {
+                await tursoExecute("INSERT INTO user_treasure_log (user_id, has_treasure_access, last_spin_date, created_at) VALUES (?, 0, ?, ?)", [userId, today, Date.now()]);
+            }
+            return NextResponse.json({ success: true, message: "Spin recorded" });
+        } else if (action === "clearAccess") {
+            await tursoExecute("UPDATE user_treasure_log SET has_treasure_access = 0, treasure_access_date = NULL WHERE user_id = ?", [userId]);
+            return NextResponse.json({ success: true, message: "Access cleared" });
+        }
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    } catch (e) { return NextResponse.json({ error: String(e) }, { status: 500 }); }
+}
+
+const SEGMENTS = [
+    { label: "Rp 5", rp: 5, gems: 0, weight: 10 }, { label: "ZONK", rp: 0, gems: 0, weight: 10 },
+    { label: "5 Gems", rp: 0, gems: 5, weight: 10 }, { label: "ZONK", rp: 0, gems: 0, weight: 10 },
+    { label: "Rp 15", rp: 15, gems: 0, weight: 8 }, { label: "ZONK", rp: 0, gems: 0, weight: 10 },
+    { label: "10 Gems", rp: 0, gems: 10, weight: 8 }, { label: "ZONK", rp: 0, gems: 0, weight: 10 },
+    { label: "Rp 25", rp: 25, gems: 0, weight: 4 }, { label: "ZONK", rp: 0, gems: 0, weight: 10 },
+    { label: "25 Gems", rp: 0, gems: 25, weight: 10 },
+];
+
+async function postSpin(req: Request) {
+    try {
+        const body = await req.json();
+        const { userId } = body;
+        if (!userId) return NextResponse.json({ error: "Login required" }, { status: 401 });
+        const today = new Date().toISOString().split("T")[0];
+
+        // Security 1: Rate Limit
+        const allowed = await Security.checkRateLimit(`SPIN:${userId}`, 1, 10);
+        if (!allowed) return NextResponse.json({ error: "Too fast" }, { status: 429 });
+
+        // Security 2: Double Spin check
+        const logs = await tursoQuery("SELECT * FROM user_treasure_log WHERE user_id = ?", [userId]);
+        const treasureLog = logs[0];
+        if (treasureLog && treasureLog.last_spin_date === today) {
+            await Security.log(userId, treasureLog.user_name || "Unknown", SecurityEvent.SPIN_ABUSE, "Attempted double spin", SecuritySeverity.HIGH);
+            return NextResponse.json({ error: "Already spun today", alreadySpun: true }, { status: 429 });
+        }
+
+        const totalWeight = SEGMENTS.reduce((sum, seg) => sum + seg.weight, 0);
+        let random = Math.random() * totalWeight;
+        let segmentIndex = 0;
+        for (let i = 0; i < SEGMENTS.length; i++) {
+            random -= SEGMENTS[i].weight;
+            if (random <= 0) { segmentIndex = i; break; }
+        }
+        const segment = SEGMENTS[segmentIndex];
+
+        if (treasureLog) {
+            await tursoExecute("UPDATE user_treasure_log SET last_spin_date = ? WHERE user_id = ?", [today, userId]);
+        } else {
+            await tursoExecute("INSERT INTO user_treasure_log (user_id, has_treasure_access, last_spin_date, created_at) VALUES (?, 1, ?, ?)", [userId, today, Date.now()]);
+        }
+
+        if (segment.rp === 0 && segment.gems === 0) {
+            return NextResponse.json({ segmentIndex, gemsWon: 0, cashbackWon: 0, voucherCode: null, message: "Zonk!" });
+        }
+
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let code = "SPIN-";
+        for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+
+        await tursoExecute(
+            "INSERT INTO vouchers (code, value_rp, gems_amount, cashback_amount, is_claimed, created_at) VALUES (?, ?, ?, ?, 0, ?)",
+            [code, segment.rp, segment.gems, segment.rp, Date.now()]
+        );
+        return NextResponse.json({ segmentIndex, gemsWon: segment.gems, cashbackWon: segment.rp, voucherCode: code, message: "You won!" });
+    } catch (e) { return NextResponse.json({ error: String(e) }, { status: 500 }); }
+}
+
+// --------------------------------------------------------------------------------
+// LOGIC: USER
+// --------------------------------------------------------------------------------
+async function getUserSync(req: Request) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const userId = searchParams.get("userId");
+        if (!userId) return NextResponse.json({ success: false }, { status: 400 });
+        const rows = await tursoQuery("SELECT * FROM user_progress WHERE user_id = ?", [userId]);
+        const user = rows[0];
+        return user ? NextResponse.json({ success: true, user }) : NextResponse.json({ success: false }, { status: 404 });
+    } catch (e) { return NextResponse.json({ success: false, error: String(e) }, { status: 500 }); }
+}
+
+async function postUserSync(req: Request) {
+    try {
+        const body = await req.json();
+        const { userId, hearts, points, isGuest, hasActiveSubscription, cashbackBalance } = body;
+        if (!userId) return NextResponse.json({ success: false }, { status: 400 });
+
+        const existing = await tursoQuery("SELECT * FROM user_progress WHERE user_id = ?", [userId]);
+
+        if (existing.length > 0) {
+            const oldPoints = existing[0].points || 0;
+            const diff = points - oldPoints;
+            const newCashback = cashbackBalance > 0 ? cashbackBalance : (existing[0].cashback_balance || 0);
+
+            // SECURITY: VALIDATE POINTS DELTA
+            // Allow max 200 points increase per sync. 200 is already generous for a single lesson.
+            if (diff > 200) {
+                await Security.log(userId, existing[0].user_name, SecurityEvent.GEMS_MANIPULATION, `Suspicious points jump: +${diff}`, SecuritySeverity.CRITICAL);
+                // DENY THE UPDATE
+                return NextResponse.json({ success: false, error: "Sync rejected: Suspicious activity detected." }, { status: 403 });
+            }
+
+            // Also check for huge cashback jumps (assuming cashback shouldn't increase via sync, only via vouchers)
+            const oldCashback = existing[0].cashback_balance || 0;
+            if (newCashback > oldCashback) {
+                // Cashback should only increase via specific endpoints (spin/voucher), not sync
+                // We'll reset it to old value
+                await Security.log(userId, existing[0].user_name, SecurityEvent.GEMS_MANIPULATION, `User tried to set cashback via sync: ${oldCashback} -> ${newCashback}`, SecuritySeverity.HIGH);
+                // Do not update cashback
+                await tursoExecute(
+                    "UPDATE user_progress SET hearts = ?, points = ?, is_guest = ?, has_active_subscription = ? WHERE user_id = ?",
+                    [hearts, points, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, userId]
+                );
+                return NextResponse.json({ success: true }); // Partial success (ignored cashback)
+            }
+
+            await tursoExecute(
+                "UPDATE user_progress SET hearts = ?, points = ?, is_guest = ?, has_active_subscription = ?, cashback_balance = ? WHERE user_id = ?",
+                [hearts, points, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, newCashback, userId]
+            );
+        } else {
+            // New user Sync
+            // Ensure they don't start with 99999 points
+            if (points > 1000) {
+                await Security.log(userId, "New User", SecurityEvent.GEMS_MANIPULATION, `New user userSync with high points: ${points}`, SecuritySeverity.HIGH);
+                // Reset to 0
+                const safePoints = 0;
+                await tursoExecute(
+                    "INSERT INTO user_progress (user_id, hearts, points, is_guest, has_active_subscription, cashback_balance, user_name, user_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    [userId, 3, 10, 0, 0, 0, "New User", "/mascot.svg"]
+                );
+            } else {
+                await tursoExecute(
+                    "INSERT INTO user_progress (user_id, hearts, points, is_guest, has_active_subscription, cashback_balance, user_name, user_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    [userId, 3, 10, 0, 0, 0, "New User", "/mascot.svg"]
+                );
+            }
+        }
+        return NextResponse.json({ success: true });
+    } catch (e) { return NextResponse.json({ success: false, error: String(e) }, { status: 500 }); }
+}
+
+async function getUsersRecent() {
+    try {
+        const rows = await tursoQuery("SELECT user_name as name FROM user_progress ORDER BY points DESC LIMIT 4");
+        return NextResponse.json(rows);
+    } catch (e) { return NextResponse.json({ error: String(e) }, { status: 500 }); }
+}
+
+// --------------------------------------------------------------------------------
+// LOGIC: VOUCHERS
+// --------------------------------------------------------------------------------
+async function postVouchersGenerate(req: Request) {
+    try {
+        const body = await req.json();
+        const { qty, valueRp } = body;
+        const gems = Math.floor(valueRp / 100);
+        const results = [];
+        for (let i = 0; i < qty; i++) {
+            const code = "CN-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+            const cashback = Math.floor(valueRp * 0.01);
+            await tursoExecute(
+                "INSERT INTO vouchers (code, value_rp, gems_amount, cashback_amount, is_claimed, created_at) VALUES (?, ?, ?, ?, 0, ?)",
+                [code, valueRp, gems, cashback, Date.now()]
+            );
+            results.push({ code, valueRp, gems, cashback });
+        }
+        return NextResponse.json({ success: true, vouchers: results });
+    } catch (e) { return NextResponse.json({ success: false, error: String(e) }, { status: 500 }); }
+}
+
+async function postVouchersRedeem(req: Request) {
+    try {
+        const body = await req.json();
+        const { code, userId } = body;
+
+        // Security: Rate limit attempts (5 per 15 minutes)
+        const allowed = await Security.checkRateLimit(`VOUCHER_ATTEMPT:${userId}`, 5, 900);
+        if (!allowed) {
+            await Security.log(userId, "Unknown", SecurityEvent.VOUCHER_BRUTEFORCE, "Rate limit exceeded for voucher redemption", SecuritySeverity.MEDIUM);
+            return NextResponse.json({ error: "Too many attempts. Blocked for 15 minutes." }, { status: 429 });
+        }
+
+        const vouchers = await tursoQuery("SELECT * FROM vouchers WHERE code = ?", [code]);
+        const voucher = vouchers[0];
+        if (!voucher) return NextResponse.json({ success: false, message: "Not found" }, { status: 404 });
+        if (voucher.is_claimed) return NextResponse.json({ success: false, message: "Used" }, { status: 400 });
+
+        await tursoExecute("UPDATE vouchers SET is_claimed = 1, claimed_by = ?, claimed_at = ? WHERE id = ?", [userId, Date.now(), voucher.id]);
+        await tursoExecute("UPDATE user_progress SET points = points + ?, cashback_balance = cashback_balance + ? WHERE user_id = ?", [voucher.gems_amount, voucher.cashback_amount, userId]);
+        return NextResponse.json({ success: true, gems: voucher.gems_amount, cashback: voucher.cashback_amount });
+    } catch (e) { return NextResponse.json({ success: false, error: String(e) }, { status: 500 }); }
+}
 
 // --------------------------------------------------------------------------------
 // LOGIC: WEBHOOKS
@@ -126,18 +419,14 @@ async function postWebhookMidtrans(req: Request) {
         // 2. Handle Status
         if (transaction_status === "capture" || transaction_status === "settlement") {
             const parts = order_id.split("_");
-            // format: TYPE_userId_timestamp
-
             if (parts.length < 3) return NextResponse.json({ received: true });
 
             const typeCode = parts[0];
             const userId = parts[1];
 
             if (typeCode === "P") {
-                // Jawara PRO
                 await tursoExecute("UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 5 WHERE user_id = ?", [userId]);
             } else if (typeCode === "G") {
-                // Gems Topup
                 const paidRp = Math.floor(Number(gross_amount));
                 let gemsToAdd = 0;
                 if (paidRp >= 10000) gemsToAdd = 120;

@@ -17,15 +17,9 @@ export class Midtrans {
     private static IS_PRODUCTION = false;
 
     static getBaseUrl() {
-        // Smart Detection: Check key prefix
-        const serverKey = process.env.MIDTRANS_SERVER_KEY || "";
-        const isSandboxKey = serverKey.startsWith("SB-");
-
-        // If it starts with SB-, force Sandbox. Otherwise, assume Production (or user error, but try Prod).
-        // Overrides the static IS_PRODUCTION flag if needed.
-        return isSandboxKey
-            ? "https://app.sandbox.midtrans.com/snap/v1/transactions"
-            : "https://app.midtrans.com/snap/v1/transactions";
+        // User's Sandbox keys do not have SB- prefix (unusual), but their dashboard confirms Sandbox.
+        // Force Sandbox URL for now.
+        return "https://app.sandbox.midtrans.com/snap/v1/transactions";
     }
 
     static async createTransaction(params: CreateTransactionParams) {
