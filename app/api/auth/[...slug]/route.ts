@@ -113,7 +113,7 @@ async function handleRegister(req: Request) {
         await tursoExecute("INSERT INTO users (id, name, email, password, role, created_at) VALUES (?, ?, ?, ?, ?, ?)",
             [userId, name, email, hashedPassword, "user", now]);
         await tursoExecute("INSERT INTO user_progress (user_id, user_name, user_image, hearts, points, is_guest, has_active_subscription, subscription_ends_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            [userId, name, "/mascot.svg", 5, 10, 0, 0, null]);
+            [userId, name, "/mascot.svg", 3, 10, 0, 0, null]);
 
         return NextResponse.json({ success: true, userId, name, message: "Account created! 10 Gems Bonus Added!" });
     } catch (e) {
