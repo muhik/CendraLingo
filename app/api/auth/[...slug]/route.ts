@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { tursoQuery, tursoQueryOne, tursoExecute } from "@/db/turso-http";
 import { cookies } from "next/headers";
 
-export const runtime = "edge";
+
 
 // --------------------------------------------------------------------------------
 // HELPERS
