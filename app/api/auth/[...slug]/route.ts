@@ -9,6 +9,7 @@ import { cookies } from "next/headers";
 // --------------------------------------------------------------------------------
 
 const verifyPassword = async (password: string, storedHash: string): Promise<boolean> => {
+    if (!storedHash || typeof storedHash !== 'string') return false;
     const [saltHex, originalHashHex] = storedHash.split(":");
     if (!saltHex || !originalHashHex) return false;
     const saltMatch = saltHex.match(/.{1,2}/g);
