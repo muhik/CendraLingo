@@ -327,12 +327,12 @@ async function postUserSync(req: Request) {
                 const safePoints = 0;
                 await tursoExecute(
                     "INSERT INTO user_progress (user_id, hearts, points, is_guest, has_active_subscription, cashback_balance, user_name, user_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    [userId, hearts, safePoints, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, cashbackBalance || 0, "New User", "/mascot.svg"]
+                    [userId, 3, 10, 0, 0, 0, "New User", "/mascot.svg"]
                 );
             } else {
                 await tursoExecute(
                     "INSERT INTO user_progress (user_id, hearts, points, is_guest, has_active_subscription, cashback_balance, user_name, user_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    [userId, hearts, points, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, cashbackBalance || 0, "New User", "/mascot.svg"]
+                    [userId, 3, 10, 0, 0, 0, "New User", "/mascot.svg"]
                 );
             }
         }
@@ -403,7 +403,7 @@ async function postWebhookXendit(req: Request) {
             const parts = external_id.split("-");
             const userId = parts[1];
             if (parts[0] === "PRO") {
-                await tursoExecute("UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 100 WHERE user_id = ?", [userId]);
+                await tursoExecute("UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 5 WHERE user_id = ?", [userId]);
             } else if (parts[0] === "GEMS") {
                 await tursoExecute("UPDATE user_progress SET points = points + ? WHERE user_id = ?", [Math.floor(amount / 100), userId]);
             }
