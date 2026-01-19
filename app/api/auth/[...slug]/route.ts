@@ -10,26 +10,47 @@ import { cookies } from "next/headers";
 
 const verifyPassword = async (password: string, storedHash: string): Promise<boolean> => {
     if (!storedHash || typeof storedHash !== 'string') return false;
-    const [saltHex, originalHashHex] = storedHash.split(":");
-    if (!saltHex || !originalHashHex) return false;
-    const saltMatch = saltHex.match(/.{1,2}/g);
-    if (!saltMatch) return false;
-    const salt = new Uint8Array(saltMatch.map(byte => parseInt(byte, 16)));
-    const encoder = new TextEncoder();
-    const keyMaterial = await crypto.subtle.importKey("raw", encoder.encode(password), { name: "PBKDF2" }, false, ["deriveBits", "deriveKey"]);
-    const derivedKey = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" }, keyMaterial, 256);
-    const derivedHashHex = Array.from(new Uint8Array(derivedKey)).map(b => b.toString(16).padStart(2, "0")).join("");
-    return derivedHashHex === originalHashHex;
+    // Check if it's the new format (starts with SIMPLE_SHA256)
+    if (storedHash.startsWith("SIMPLE_SHA256:")) {
+        const parts = storedHash.split(":");
+        if (parts.length !== 3) return false;
+        const salt = parts[1];
+        const originalHash = parts[2];
+
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password + salt);
+        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const derivedHash = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+
+        return derivedHash === originalHash;
+    }
+
+    // Fallback for old PBKDF2 (if any still exist/work)
+    try {
+        const [saltHex, originalHashHex] = storedHash.split(":");
+        if (!saltHex || !originalHashHex) return false;
+        const saltMatch = saltHex.match(/.{1,2}/g);
+        if (!saltMatch) return false;
+        const salt = new Uint8Array(saltMatch.map(byte => parseInt(byte, 16)));
+        const encoder = new TextEncoder();
+        const keyMaterial = await crypto.subtle.importKey("raw", encoder.encode(password), { name: "PBKDF2" }, false, ["deriveBits", "deriveKey"]);
+        const derivedKey = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" }, keyMaterial, 256);
+        const derivedHashHex = Array.from(new Uint8Array(derivedKey)).map(b => b.toString(16).padStart(2, "0")).join("");
+        return derivedHashHex === originalHashHex;
+    } catch (e) {
+        return false;
+    }
 };
 
 const hashPassword = async (password: string): Promise<string> => {
+    const salt = Math.random().toString(36).substring(2, 15); // Simple random string
     const encoder = new TextEncoder();
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const keyMaterial = await crypto.subtle.importKey("raw", encoder.encode(password), { name: "PBKDF2" }, false, ["deriveBits", "deriveKey"]);
-    const derivedKey = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" }, keyMaterial, 256);
-    const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("");
-    const hashHex = Array.from(new Uint8Array(derivedKey)).map(b => b.toString(16).padStart(2, "0")).join("");
-    return `${saltHex}:${hashHex}`;
+    const data = encoder.encode(password + salt);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    return `SIMPLE_SHA256:${salt}:${hashHex}`;
 };
 
 // --------------------------------------------------------------------------------

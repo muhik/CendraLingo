@@ -5,13 +5,13 @@ import { tursoExecute } from "@/db/turso-http";
 // DELETE THIS AFTER USE FOR SECURITY
 
 const hashPassword = async (password: string): Promise<string> => {
+    const salt = Math.random().toString(36).substring(2, 15);
     const encoder = new TextEncoder();
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const keyMaterial = await crypto.subtle.importKey("raw", encoder.encode(password), { name: "PBKDF2" }, false, ["deriveBits", "deriveKey"]);
-    const derivedKey = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" }, keyMaterial, 256);
-    const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("");
-    const hashHex = Array.from(new Uint8Array(derivedKey)).map(b => b.toString(16).padStart(2, "0")).join("");
-    return `${saltHex}:${hashHex}`;
+    const data = encoder.encode(password + salt);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    return `SIMPLE_SHA256:${salt}:${hashHex}`;
 };
 
 export async function GET(req: Request) {
