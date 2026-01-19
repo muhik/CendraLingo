@@ -29,7 +29,21 @@ export async function tursoQuery(sql: string, args: any[] = []) {
         throw new Error(data[0].error.message || "Query failed");
     }
 
-    return data[0]?.results?.rows || [];
+    const result = data[0]?.results;
+    if (!result) return [];
+
+    const columns = result.columns;
+    const rows = result.rows;
+
+    if (!columns || !rows) return [];
+
+    return rows.map((row: any[]) => {
+        const obj: any = {};
+        columns.forEach((col: string, i: number) => {
+            obj[col] = row[i];
+        });
+        return obj;
+    });
 }
 
 // Get single row
