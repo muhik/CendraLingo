@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { tursoQuery } from "@/db/turso-http";
 
-export const runtime = 'edge';
+
 
 export async function GET(req: Request) {
     try {
