@@ -82,8 +82,13 @@ async function postPurchase(req: Request) {
 
         return NextResponse.json({ url: transaction.redirect_url, externalId: orderId });
 
-    } catch (e) {
-        return new NextResponse(JSON.stringify({ error: String(e) }), {
+    } catch (e: any) {
+        console.error("Midtrans Purchase Error:", e);
+        // Ensure we return clean JSON, not an HTML error page
+        return new NextResponse(JSON.stringify({
+            error: e.message || String(e),
+            details: "Midtrans Transaction Failed"
+        }), {
             status: 500,
             headers: { "Content-Type": "application/json" }
         });
