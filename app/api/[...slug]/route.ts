@@ -281,7 +281,22 @@ async function getUserSync(req: Request) {
         if (!userId) return NextResponse.json({ success: false }, { status: 400 });
         const rows = await tursoQuery("SELECT * FROM user_progress WHERE user_id = ?", [userId]);
         const user = rows[0];
-        return user ? NextResponse.json({ success: true, user }) : NextResponse.json({ success: false }, { status: 404 });
+        if (!user) return NextResponse.json({ success: false }, { status: 404 });
+
+        // Map snake_case DB columns to camelCase JSON for frontend
+        const mappedUser = {
+            userId: user.user_id,
+            hearts: user.hearts,
+            points: user.points,
+            isGuest: Boolean(user.is_guest),
+            hasActiveSubscription: Boolean(user.has_active_subscription),
+            cashbackBalance: user.cashback_balance || 0,
+            userName: user.user_name,
+            lastSpinDate: user.last_spin_date,
+            // Add other fields if necessary
+        };
+
+        return NextResponse.json({ success: true, user: mappedUser });
     } catch (e) { return NextResponse.json({ success: false, error: String(e) }, { status: 500 }); }
 }
 
