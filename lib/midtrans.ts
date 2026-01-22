@@ -23,8 +23,12 @@ export class Midtrans {
     }
 
     static async createTransaction(params: CreateTransactionParams) {
-        const serverKey = process.env.MIDTRANS_SERVER_KEY;
-        if (!serverKey) throw new Error("MIDTRANS_SERVER_KEY is missing");
+        // Automatically select key based on environment
+        const serverKey = this.IS_PRODUCTION
+            ? process.env.MIDTRANS_PRODUCTION_SERVER_KEY || process.env.MIDTRANS_SERVER_KEY
+            : process.env.MIDTRANS_SANDBOX_SERVER_KEY || process.env.MIDTRANS_SERVER_KEY;
+
+        if (!serverKey) throw new Error(`Midtrans Server Key is missing for ${this.IS_PRODUCTION ? 'Production' : 'Sandbox'} environment`);
 
         const auth = btoa(serverKey + ":"); // Basic Auth
 
