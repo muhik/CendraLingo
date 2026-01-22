@@ -188,18 +188,32 @@ function ShopContent() {
                     customDescription: `Top Up ${amount} Gems`
                 })
             });
-            const data = await response.json();
+
+            // DEBUG: Check raw text first
+            const rawText = await response.text();
+            let data;
+            try {
+                data = JSON.parse(rawText);
+            } catch (e) {
+                console.error("Failed to parse JSON:", rawText);
+                alert("Error: Server returned invalid JSON. " + rawText.substring(0, 100));
+                setIsProcessing(false);
+                return;
+            }
 
             if (data.url) {
-                // Redirect to Xendit
+                // Redirect to Midtrans
                 window.location.href = data.url;
             } else {
-                toast.error(`Gagal: ${data.error || "Pembayaran gagal"}`);
+                const errMsg = data.error || "Pembayaran gagal";
+                console.error("Payment API Error:", errMsg);
+                // Use alert to ensure visibility if page crashes
+                alert(`Gagal: ${errMsg}`);
                 setIsProcessing(false);
             }
-        } catch (error) {
-            console.error(error);
-            toast.error(`Error: ${String(error)}`);
+        } catch (error: any) {
+            console.error("Purchase Flow Error:", error);
+            alert(`Application Error: ${error.message || String(error)}`);
             setIsProcessing(false);
         }
     };
