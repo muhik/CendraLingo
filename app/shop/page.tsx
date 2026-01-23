@@ -205,12 +205,11 @@ function ShopContent() {
                 const errMsg = data.error || "Pembayaran gagal";
                 console.error("Payment API Error:", errMsg);
                 toast.error(errMsg);
-                alert(`Gagal: ${errMsg}`);
                 setIsProcessing(false);
             }
         } catch (error: any) {
             console.error("Purchase Flow Error:", error);
-            alert(`Application Error: ${error.message || String(error)}`);
+            toast.error(`Application Error: ${error.message || String(error)}`);
             setIsProcessing(false);
         }
     };
