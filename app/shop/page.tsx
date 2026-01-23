@@ -189,14 +189,11 @@ function ShopContent() {
                 })
             });
 
-            // DEBUG: Check raw text first
-            const rawText = await response.text();
-            let data;
-            try {
-                data = JSON.parse(rawText);
-            } catch (e) {
-                console.error("Failed to parse JSON:", rawText);
-                alert("Error: Server returned invalid JSON. " + rawText.substring(0, 100));
+            const data = await response.json().catch(() => null);
+
+            if (!data) {
+                console.error("Invalid JSON response from server");
+                toast.error("Gagal memproses pembayaran. Silakan coba lagi nanti.");
                 setIsProcessing(false);
                 return;
             }
@@ -207,7 +204,7 @@ function ShopContent() {
             } else {
                 const errMsg = data.error || "Pembayaran gagal";
                 console.error("Payment API Error:", errMsg);
-                // Use alert to ensure visibility if page crashes
+                toast.error(errMsg);
                 alert(`Gagal: ${errMsg}`);
                 setIsProcessing(false);
             }
