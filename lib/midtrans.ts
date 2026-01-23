@@ -14,12 +14,14 @@ export class Midtrans {
     private static BASE_URL = "https://app.sandbox.midtrans.com/snap/v1/transactions";
 
     // Toggle this to true for Production
-    private static IS_PRODUCTION = false;
+    private static get IS_PRODUCTION() {
+        return process.env.MIDTRANS_IS_PRODUCTION === "true";
+    }
 
     static getBaseUrl() {
-        // User's Sandbox keys do not have SB- prefix (unusual), but their dashboard confirms Sandbox.
-        // Force Sandbox URL for now.
-        return "https://app.sandbox.midtrans.com/snap/v1/transactions";
+        return this.IS_PRODUCTION
+            ? "https://app.midtrans.com/snap/v1/transactions"
+            : "https://app.sandbox.midtrans.com/snap/v1/transactions";
     }
 
     static async createTransaction(params: CreateTransactionParams) {
