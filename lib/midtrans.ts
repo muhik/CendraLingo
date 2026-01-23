@@ -14,8 +14,9 @@ export class Midtrans {
     private static BASE_URL = "https://app.sandbox.midtrans.com/snap/v1/transactions";
 
     // Toggle this to true for Production
+    // E1 MODE: PRODUCTION LIVE
     private static get IS_PRODUCTION() {
-        return process.env.MIDTRANS_IS_PRODUCTION === "true";
+        return true;
     }
 
     static getBaseUrl() {

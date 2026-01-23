@@ -122,7 +122,7 @@ export const useUserProgress = create<UserProgressState>()(
                 set((state) => ({
                     hasActiveSubscription: true,
                     points: state.points + 1000, // Upgrade Bonus: 1000 Gems
-                    hearts: state.hearts + 100   // Upgrade Bonus: +100 Hearts
+                    hearts: 5   // Strict Rule: Refill to 5, NOT Unlimited
                 }));
                 get().syncWithDb();
             },

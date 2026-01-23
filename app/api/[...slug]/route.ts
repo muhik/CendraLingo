@@ -436,7 +436,21 @@ async function postWebhookMidtrans(req: Request) {
             return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
         }
 
-        // 2. Handle Status
+        // 2. Handle Status & Log Transaction
+        await tursoExecute(
+            "INSERT INTO transactions (order_id, user_id, gross_amount, status, payment_type, transaction_time, json_data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                order_id,
+                order_id.split("_")[1] || "unknown",
+                Number(gross_amount),
+                transaction_status,
+                body.payment_type || "unknown",
+                body.transaction_time || new Date().toISOString(),
+                JSON.stringify(body),
+                Date.now()
+            ]
+        );
+
         if (transaction_status === "capture" || transaction_status === "settlement") {
             const parts = order_id.split("_");
             if (parts.length < 3) return NextResponse.json({ received: true });
