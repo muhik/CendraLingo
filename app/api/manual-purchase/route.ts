@@ -18,17 +18,17 @@ export async function POST(req: Request) {
         // Generate a pseudo Order ID for manual transaction
         const orderId = `M-${Math.random().toString(36).substring(2, 7).toUpperCase()}_${userId}_${Date.now()}`;
 
-        // Prepare SQL
+        // Prepare SQL - Turso HTTP API requires typed args
         const sql = "INSERT INTO transactions (order_id, user_id, gross_amount, status, payment_type, transaction_time, created_at, json_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         const args = [
-            orderId,
-            userId,
-            customAmount,
-            "pending_manual",
-            paymentMethod || "manual_transfer",
-            new Date().toISOString(),
-            Date.now(),
-            JSON.stringify({ planType, note: "User claimed they have transferred manually." })
+            { type: "text", value: orderId },
+            { type: "text", value: userId },
+            { type: "integer", value: String(customAmount) },
+            { type: "text", value: "pending_manual" },
+            { type: "text", value: paymentMethod || "manual_transfer" },
+            { type: "text", value: new Date().toISOString() },
+            { type: "integer", value: String(Date.now()) },
+            { type: "text", value: JSON.stringify({ planType, note: "User claimed they have transferred manually." }) }
         ];
 
         // TURSO RAW FETCH
