@@ -14,6 +14,7 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { RedeemModal } from "@/components/modals/redeem-modal";
 import { ProModal } from "@/components/modals/pro-modal";
+import { ManualPaymentModal } from "@/components/modals/manual-payment-modal";
 
 import { useSearchParams } from "next/navigation";
 
@@ -163,21 +164,29 @@ function ShopContent() {
         }
     };
 
+    // Manual Payment States
+    const [showManualModal, setShowManualModal] = useState(false);
+    const [manualAmount, setManualAmount] = useState(0);
+    const [manualPlanType, setManualPlanType] = useState("");
+    const [useManualPayment, setUseManualPayment] = useState(false); // Toggle state
+
     const handleBuyGems = async (amount: number, priceRp: string) => {
         if (isProcessing) return;
 
-        // 1. GUEST CHECK (DISABLED FOR TESTING)
-        // if (isGuest) {
-        //     setPendingPurchase({ amount, price: priceRp });
-        //     setShowAuthModal(true);
-        //     return;
-        // }
+        // Strip non-numeric
+        const numericPrice = parseInt(priceRp.replace(/[^0-9]/g, ""), 10);
 
+        if (useManualPayment) {
+            // MANUAL FLOW
+            setManualAmount(numericPrice);
+            setManualPlanType("GEMS_TOPUP");
+            setShowManualModal(true);
+            return;
+        }
+
+        // MIDTRANS FLOW
         setIsProcessing(true);
         try {
-            // Parse numeric price from string "Rp 10.000" -> 10000
-            const numericPrice = parseInt(priceRp.replace(/[^0-9]/g, ""), 10);
-
             const response = await fetch("/api/purchase", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -214,6 +223,33 @@ function ShopContent() {
         }
     };
 
+    const handleConfirmManualPayment = async () => {
+        setIsProcessing(true);
+        try {
+            const res = await fetch("/api/manual-purchase", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId,
+                    planType: manualPlanType,
+                    customAmount: manualAmount,
+                    paymentMethod: "MANUAL_TRANSFER"
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success("Konfirmasi Terkirim! Mohon tunggu verifikasi Admin (max 24 jam).");
+                setShowManualModal(false);
+            } else {
+                toast.error("Gagal mengirim konfirmasi: " + data.error);
+            }
+        } catch (error) {
+            toast.error("Terjadi kesalahan koneksi.");
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
     const onAuthSuccess = () => {
         if (pendingPurchase) {
             toast.info(`Login Berhasil! Bonus +50 Gems sudah masuk. Silahkan lanjutkan pembelian.`);
@@ -245,6 +281,14 @@ function ShopContent() {
                 isOpen={showProModal}
                 onClose={() => setShowProModal(false)}
                 onConfirm={handleConfirmUpgrade}
+                isLoading={isProcessing}
+            />
+
+            <ManualPaymentModal
+                isOpen={showManualModal}
+                onClose={() => setShowManualModal(false)}
+                amount={manualAmount}
+                onConfirm={handleConfirmManualPayment}
                 isLoading={isProcessing}
             />
 
@@ -410,8 +454,65 @@ function ShopContent() {
                                     iconColor="text-orange-500 fill-orange-500"
                                     price={2000}
                                     points={points}
-                                    hasActive={false}
+                                    hasActive={false} // Allow buying even if full
+                                    activeTitle="BEKU SIHIR"
                                     onBuy={handleBuyFreeze}
+                                />
+                            </div>
+                        </div>
+
+                        {/* TOP UP GEMS SECTION */}
+                        <div>
+                            <h2 className="text-xl font-bold text-sky-400 mb-6 flex items-center gap-2">
+                                <Gem className="text-sky-400 fill-sky-400" /> Top Up Gems
+                            </h2>
+
+                            {/* PAYMENT METHOD TOGGLE */}
+                            <div className="w-full mb-6">
+                                <div className="bg-[#14532d] p-4 rounded-xl border-2 border-[#166534] flex flex-col md:flex-row items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-amber-100 p-2 rounded-lg">
+                                            <Image src={useManualPayment ? "/bca.png" : "/mascot.svg"} width={32} height={32} alt="Payment" className="object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-white text-lg">Metode Pembayaran</h3>
+                                            <p className="text-white/70 text-sm">
+                                                {useManualPayment ? "Transfer Manual (BCA / QRIS)" : "Otomatis (Midtrans)"}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 bg-[#022c22] p-1 rounded-lg border border-[#166534]">
+                                        <button
+                                            onClick={() => setUseManualPayment(false)}
+                                            className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${!useManualPayment ? "bg-green-500 text-white shadow" : "text-white/50 hover:text-white"}`}
+                                        >
+                                            Otomatis
+                                        </button>
+                                        <button
+                                            onClick={() => setUseManualPayment(true)}
+                                            className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${useManualPayment ? "bg-amber-500 text-white shadow" : "text-white/50 hover:text-white"}`}
+                                        >
+                                            Manual
+                                        </button>
+                                    </div>
+                                </div>
+                                {useManualPayment && (
+                                    <div className="mt-2 text-xs text-amber-300 text-center animate-pulse">
+                                        * Metode manual membutuhkan verifikasi Admin (Max 24 jam).
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                name="Streak Freeze"
+                                description="Jaga streak-mu tetap aman meskipun absen sehari."
+                                Icon={Flame}
+                                iconColor="text-orange-500 fill-orange-500"
+                                price={2000}
+                                points={points}
+                                hasActive={false}
+                                onBuy={handleBuyFreeze}
                                 />
                             </div>
                         </div>
