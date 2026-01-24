@@ -56,29 +56,35 @@ export const RightSidebar = () => {
         setIsNavigating(true);
 
         try {
-            // Case 1: User ALREADY has access (Strict Mode OFF or Already Clicked Link)
-            if (hasAccess) {
-                router.push("/treasure");
-                return;
-            }
+            // Case 1: Force Paid4Link Flow (User requirement: "sifatnya tetep"/always required)
+            // We set access in database first, then redirect.
 
-            // Case 2: User needs access. Grant it then redirect.
-            // Set access in database
-            await fetch("/api/treasure/access", {
+            // 1. Set access in database
+            const accessRes = await fetch("/api/treasure/access", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ userId, action: "setAccess" }),
             });
 
-            // If Strict Mode AND URL is configured, redirect there
+            if (!accessRes.ok) {
+                console.error("Failed to set access in DB");
+                alert("Gagal koneksi ke server. Coba lagi.");
+                setIsNavigating(false);
+                return;
+            }
+
+            // 2. If Paid4Link logic is enabled, redirect there
             if (requirePaid4link && paid4linkUrl) {
                 let targetUrl = paid4linkUrl.trim();
+                // Ensure protocol
                 if (!targetUrl.startsWith("http")) {
                     targetUrl = `https://${targetUrl}`;
                 }
+
+                // FORCE redirect
                 window.location.href = targetUrl;
             } else {
-                // Otherwise (Strict Mode OFF or No URL), just go to treasure
+                // Only if NO paid link is configured, go direct
                 router.push("/treasure");
             }
         } catch (error) {
