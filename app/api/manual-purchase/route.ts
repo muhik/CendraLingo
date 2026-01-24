@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@libsql/client";
+import { createClient } from "@libsql/client/web";
+
+console.log("🔌 [API] Connecting to Turso...");
 
 const turso = createClient({
     url: process.env.TURSO_CONNECTION_URL || "file:local.db",
@@ -10,8 +12,11 @@ export const runtime = "edge";
 
 export async function POST(req: Request) {
     try {
+        console.log("📨 [API] Manual Purchase Request received");
         const body = await req.json();
         const { userId, planType, customAmount, paymentMethod } = body;
+
+        console.log("📦 [API] Payload:", { userId, customAmount });
 
         // Validation
         if (!userId || !customAmount) {
@@ -23,6 +28,7 @@ export async function POST(req: Request) {
         const orderId = `M-${Math.random().toString(36).substring(2, 7).toUpperCase()}_${userId}_${Date.now()}`;
 
         // Insert into Transactions Table with status 'pending_manual'
+        console.log("💾 [API] Inserting transaction...");
         await turso.execute({
             sql: "INSERT INTO transactions (order_id, user_id, gross_amount, status, payment_type, transaction_time, created_at, json_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             args: [
