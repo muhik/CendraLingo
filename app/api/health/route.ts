@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
-async function tursoExecute(sql: string, args: any[] = []) {
+async function tursoExecute(sql: string) {
     const dbUrl = process.env.TURSO_CONNECTION_URL!;
     const dbToken = process.env.TURSO_AUTH_TOKEN!;
     const finalUrl = dbUrl.startsWith("libsql://") ? dbUrl.replace("libsql://", "https://") : dbUrl;
@@ -16,14 +16,14 @@ async function tursoExecute(sql: string, args: any[] = []) {
         },
         body: JSON.stringify({
             requests: [
-                { type: "execute", stmt: { sql, args } },
+                { type: "execute", stmt: { sql, args: [] } },
                 { type: "close" },
             ],
         }),
     });
 
     if (!response.ok) {
-        throw new Error(`Database Error: ${response.status}`);
+        throw new Error(`DB Error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -31,44 +31,19 @@ async function tursoExecute(sql: string, args: any[] = []) {
 }
 
 export async function GET() {
-    let logs = [];
     try {
-        logs.push("Starting Migration...");
-
-        // 1. Create Table if not exists (Safe)
-        try {
-            await tursoExecute(`
-                CREATE TABLE IF NOT EXISTS treasure_settings (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    paid4link_url TEXT,
-                    is_enabled INTEGER DEFAULT 1,
-                    require_paid4link INTEGER DEFAULT 0,
-                    updated_at INTEGER
-                )
-            `);
-            logs.push("Create Table: Success (or existed)");
-        } catch (e) {
-            logs.push("Create Table Error: " + e);
-        }
-
-        // 2. Add Column (This is the critical fix)
-        try {
-            await tursoExecute("ALTER TABLE treasure_settings ADD COLUMN paid4link_url TEXT");
-            logs.push("Add Column 'paid4link_url': SUCCESS");
-        } catch (e) {
-            logs.push("Add Column 'paid4link_url': " + e); // Will fail if exists, that is OK.
-        }
-
-        // 3. Verify
-        const check = await tursoExecute("PRAGMA table_info(treasure_settings)");
+        // READ-ONLY: Just dump table content
+        const data = await tursoExecute("SELECT * FROM treasure_settings ORDER BY id DESC LIMIT 5");
 
         return NextResponse.json({
-            status: "MIGRATION_ATTEMPTED",
-            logs,
-            final_schema: check
+            status: "DEBUG_READ_ONLY",
+            treasure_settings: data
         });
 
     } catch (error: any) {
-        return NextResponse.json({ status: "CRITIAL_ERROR", error: String(error), logs });
+        return NextResponse.json({
+            status: "ERROR",
+            error: String(error)
+        });
     }
 }
