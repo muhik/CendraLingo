@@ -15,6 +15,8 @@ export const RightSidebar = () => {
     const { hasActiveSubscription, points, isGuest, userId, hearts } = useUserProgress();
     const [canSpin, setCanSpin] = useState(false);
     const [paid4linkUrl, setPaid4linkUrl] = useState<string | null>(null);
+    const [requirePaid4link, setRequirePaid4link] = useState(false);
+    const [hasAccess, setHasAccess] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isNavigating, setIsNavigating] = useState(false);
 
@@ -27,13 +29,15 @@ export const RightSidebar = () => {
 
         const checkAccess = async () => {
             try {
-                const res = await fetch(`/api/treasure/access?userId=${userId}`);
+                const res = await fetch(`/api/treasure/access?userId=${userId}&t=${Date.now()}`, { cache: "no-store" });
                 const data = await res.json();
 
                 // Can show widget if: enabled AND not already spun today
                 const shouldShow = data.settings?.isEnabled && !data.alreadySpunToday;
                 setCanSpin(shouldShow);
                 setPaid4linkUrl(data.settings?.paid4linkUrl);
+                setRequirePaid4link(data.settings?.requirePaid4link);
+                setHasAccess(data.hasAccess);
             } catch (err) {
                 console.error("[DEBUG Widget] Error:", err);
                 setCanSpin(false);
@@ -45,13 +49,20 @@ export const RightSidebar = () => {
         checkAccess();
     }, [userId, isGuest, hasActiveSubscription]);
 
-    // Handle widget click - sets access in database then redirect
+    // Handle widget click - conditionally redirect or go to treasure
     const handleTreasureClick = async () => {
         if (!userId || isNavigating) return;
 
         setIsNavigating(true);
 
         try {
+            // Case 1: User ALREADY has access (Strict Mode OFF or Already Clicked Link)
+            if (hasAccess) {
+                router.push("/treasure");
+                return;
+            }
+
+            // Case 2: User needs access. Grant it then redirect.
             // Set access in database
             await fetch("/api/treasure/access", {
                 method: "POST",
@@ -59,15 +70,19 @@ export const RightSidebar = () => {
                 body: JSON.stringify({ userId, action: "setAccess" }),
             });
 
-            // If paid4link URL is configured, redirect there
-            if (paid4linkUrl) {
-                window.location.href = paid4linkUrl;
+            // If Strict Mode AND URL is configured, redirect there
+            if (requirePaid4link && paid4linkUrl) {
+                let targetUrl = paid4linkUrl.trim();
+                if (!targetUrl.startsWith("http")) {
+                    targetUrl = `https://${targetUrl}`;
+                }
+                window.location.href = targetUrl;
             } else {
-                // Otherwise, go to treasure page
+                // Otherwise (Strict Mode OFF or No URL), just go to treasure
                 router.push("/treasure");
             }
         } catch (error) {
-            console.error("Failed to set access:", error);
+            console.error("Failed to process treasure click:", error);
             setIsNavigating(false);
         }
     };

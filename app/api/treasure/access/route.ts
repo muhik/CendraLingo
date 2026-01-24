@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 async function tursoExecute(sql: string, args: any[] = []) {
     const dbUrl = process.env.TURSO_CONNECTION_URL!;
@@ -43,16 +44,16 @@ export async function GET(req: Request) {
         let settings = { paid4linkUrl: "", isEnabled: true, requirePaid4link: false };
 
         if (settingsRes?.rows?.length > 0) {
-            const cols = settingsRes.cols.map((c: any) => c.name);
+            const cols = settingsRes.cols.map((c: any) => c.name.toLowerCase());
             const row = settingsRes.rows[0];
             const data: any = {};
             row.forEach((cell: any, i: number) => {
                 data[cols[i]] = cell.value;
             });
             settings = {
-                paid4linkUrl: data.paid4link_url || "",
-                isEnabled: data.is_enabled === 1,
-                requirePaid4link: data.require_paid4link === 1
+                paid4linkUrl: data["paid4link_url"] || data["paid4linkurl"] || data["paid4linkUrl"] || "",
+                isEnabled: (data["is_enabled"] == 1) || (data["isenabled"] == 1),
+                requirePaid4link: (data["require_paid4link"] == 1) || (data["requirepaid4link"] == 1)
             };
         }
 

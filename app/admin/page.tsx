@@ -315,7 +315,7 @@ export default function AdminPage() {
         if (isAuthenticated) {
             fetchRedeemRequests();
             // Fetch Treasure Settings
-            fetch("/api/admin/treasure-settings")
+            fetch(`/api/admin/treasure-settings?t=${Date.now()}`, { cache: "no-store", headers: { "Pragma": "no-cache" } })
                 .then(res => res.json())
                 .then(data => setTreasureSettings({
                     paid4linkUrl: data.paid4linkUrl || "",

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 async function tursoExecute(sql: string, args: any[] = []) {
     const dbUrl = process.env.TURSO_CONNECTION_URL!;
@@ -34,18 +35,23 @@ export async function GET() {
         const result = await tursoExecute("SELECT * FROM treasure_settings ORDER BY id DESC LIMIT 1");
 
         if (result?.rows?.length > 0) {
-            // Parse columns
-            const cols = result.cols.map((c: any) => c.name);
-            const row = result.rows[0];
+            // Parse columns robustly
+            const cols = result.cols.map((c: any) => c.name.toLowerCase());
+            const row = result.rows[0]; // array of cells
             const data: any = {};
+
+            // Map values to lowercased column names
             row.forEach((cell: any, i: number) => {
-                data[cols[i]] = cell.value;
+                if (cols[i]) {
+                    data[cols[i]] = cell.value;
+                }
             });
 
+            // "data" now uses lowercased keys. We check multiple variants to be safe.
             return NextResponse.json({
-                paid4linkUrl: data.paid4link_url || "",
-                isEnabled: data.is_enabled === 1,
-                requirePaid4link: data.require_paid4link === 1
+                paid4linkUrl: data["paid4link_url"] || data["paid4linkurl"] || data["paid4linkUrl"] || "",
+                isEnabled: (data["is_enabled"] == 1) || (data["isenabled"] == 1),
+                requirePaid4link: (data["require_paid4link"] == 1) || (data["requirepaid4link"] == 1)
             });
         }
 
