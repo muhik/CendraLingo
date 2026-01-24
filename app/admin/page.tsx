@@ -605,9 +605,9 @@ export default function AdminPage() {
                                             {tx.status === 'pending_manual' && (
                                                 <td className="p-4 flex gap-2">
                                                     <Button size="sm" className="bg-green-600 hover:bg-green-700 h-8" onClick={() => handleApproveManual(tx.order_id, "approve")}>
-                                                        <Check className="h-4 w-4 mr-1" /> Approve
+                                                        <CheckCircle className="h-4 w-4 mr-1" /> Approve
                                                     </Button>
-                                                    <Button size="sm" variant="destructive" className="h-8" onClick={() => handleApproveManual(tx.order_id, "reject")}>
+                                                    <Button size="sm" variant="ghost" className="h-8 bg-red-100 text-red-600 hover:bg-red-200" onClick={() => handleApproveManual(tx.order_id, "reject")}>
                                                         <XCircle className="h-4 w-4 mr-1" /> Reject
                                                     </Button>
                                                 </td>
@@ -729,7 +729,7 @@ export default function AdminPage() {
                                                     (adminVouchers || []).map((v) => (
                                                         <tr key={v.id} className={`border-b hover:bg-slate-50 ${v.isClaimed ? "bg-slate-50 opacity-60" : ""}`}>
                                                             <td className="p-4 text-xs font-mono text-slate-500">
-                                                                {new Date(v.createdAt).toLocaleString("id-ID", {
+                                                                {new Date(Number(v.createdAt)).toLocaleString("id-ID", {
                                                                     day: 'numeric', month: 'short', year: 'numeric',
                                                                     hour: '2-digit', minute: '2-digit'
                                                                 })}
@@ -1028,7 +1028,7 @@ export default function AdminPage() {
                                         {redeemRequests.map((r) => (
                                             <tr key={r.id} className={`border-b hover:bg-slate-50 ${r.status === "completed" ? "bg-green-50/50" : r.status === "rejected" ? "bg-red-50/50" : ""}`}>
                                                 <td className="p-4 text-xs text-slate-500">
-                                                    {new Date(r.createdAt).toLocaleString("id-ID", {
+                                                    {new Date(Number(r.createdAt)).toLocaleString("id-ID", {
                                                         day: "numeric", month: "short", year: "numeric",
                                                         hour: "2-digit", minute: "2-digit"
                                                     })}
@@ -1233,7 +1233,7 @@ export default function AdminPage() {
                                         feedbacks.map((f) => (
                                             <tr key={f.id} className="border-b hover:bg-slate-50 align-top">
                                                 <td className="p-4 text-xs text-slate-500 whitespace-nowrap">
-                                                    {new Date(f.created_at).toLocaleString("id-ID")}
+                                                    {new Date(Number(f.created_at)).toLocaleString("id-ID")}
                                                 </td>
                                                 <td className="p-4">
                                                     <div className="font-bold text-slate-700">{f.user_name}</div>
@@ -1414,7 +1414,7 @@ export default function AdminPage() {
                                         securityLogs.map((log: any) => (
                                             <tr key={log.id} className="border-b hover:bg-slate-50">
                                                 <td className="p-4 text-xs text-slate-500 font-mono whitespace-nowrap">
-                                                    {new Date(log.created_at).toLocaleString("id-ID")}
+                                                    {new Date(Number(log.created_at)).toLocaleString("id-ID")}
                                                 </td>
                                                 <td className="p-4">
                                                     {log.severity === 'CRITICAL' && <span className="bg-red-600 text-white px-2 py-1 rounded text-xs font-bold animate-pulse">CRITICAL</span>}
