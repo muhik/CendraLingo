@@ -584,38 +584,36 @@ export default function AdminPage() {
                                 {transactions.length === 0 ? (
                                     <tr><td colSpan={6} className="p-8 text-center text-slate-400">Belum ada transaksi terekam.</td></tr>
                                 ) : (
-                                    {
-                                        transactions.map((tx) => (
-                                            <tr key={tx.order_id} className="border-b hover:bg-slate-50">
-                                                <td className="p-4 text-xs font-mono text-slate-500">
-                                                    {new Date(tx.created_at).toLocaleString("id-ID")}
+                                    transactions.map((tx) => (
+                                        <tr key={tx.order_id} className="border-b hover:bg-slate-50">
+                                            <td className="p-4 text-xs font-mono text-slate-500">
+                                                {new Date(tx.created_at).toLocaleString("id-ID")}
+                                            </td>
+                                            <td className="p-4 font-mono font-bold text-slate-700">{tx.order_id}</td>
+                                            <td className="p-4 text-xs font-mono">{tx.user_id}</td>
+                                            <td className="p-4 font-bold">Rp {tx.gross_amount?.toLocaleString()}</td>
+                                            <td className="p-4">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-bold border ${tx.status === 'settlement' || tx.status === 'capture' ? 'bg-green-100 text-green-700 border-green-200' :
+                                                    tx.status === 'pending' || tx.status === 'pending_manual' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                                                        'bg-red-100 text-red-700 border-red-200'
+                                                    }`}>
+                                                    {tx.status?.toUpperCase().replace("_", " ")}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 text-xs uppercase text-slate-500">{tx.payment_type?.replace("_", " ")}</td>
+                                            {/* Action Column for Manual Approval */}
+                                            {tx.status === 'pending_manual' && (
+                                                <td className="p-4 flex gap-2">
+                                                    <Button size="sm" className="bg-green-600 hover:bg-green-700 h-8" onClick={() => handleApproveManual(tx.order_id, "approve")}>
+                                                        <Check className="h-4 w-4 mr-1" /> Approve
+                                                    </Button>
+                                                    <Button size="sm" variant="destructive" className="h-8" onClick={() => handleApproveManual(tx.order_id, "reject")}>
+                                                        <XCircle className="h-4 w-4 mr-1" /> Reject
+                                                    </Button>
                                                 </td>
-                                                <td className="p-4 font-mono font-bold text-slate-700">{tx.order_id}</td>
-                                                <td className="p-4 text-xs font-mono">{tx.user_id}</td>
-                                                <td className="p-4 font-bold">Rp {tx.gross_amount?.toLocaleString()}</td>
-                                                <td className="p-4">
-                                                    <span className={`px-2 py-1 rounded-full text-xs font-bold border ${tx.status === 'settlement' || tx.status === 'capture' ? 'bg-green-100 text-green-700 border-green-200' :
-                                                        tx.status === 'pending' || tx.status === 'pending_manual' ? 'bg-amber-100 text-amber-700 border-amber-200' :
-                                                            'bg-red-100 text-red-700 border-red-200'
-                                                        }`}>
-                                                        {tx.status?.toUpperCase().replace("_", " ")}
-                                                    </span>
-                                                </td>
-                                                <td className="p-4 text-xs uppercase text-slate-500">{tx.payment_type?.replace("_", " ")}</td>
-                                                {/* Action Column for Manual Approval */}
-                                                {tx.status === 'pending_manual' && (
-                                                    <td className="p-4 flex gap-2">
-                                                        <Button size="sm" className="bg-green-600 hover:bg-green-700 h-8" onClick={() => handleApproveManual(tx.order_id, "approve")}>
-                                                            <Check className="h-4 w-4 mr-1" /> Approve
-                                                        </Button>
-                                                        <Button size="sm" variant="destructive" className="h-8" onClick={() => handleApproveManual(tx.order_id, "reject")}>
-                                                            <XCircle className="h-4 w-4 mr-1" /> Reject
-                                                        </Button>
-                                                    </td>
-                                                )}
-                                            </tr>
-                                        ))
-                                    }
+                                            )}
+                                        </tr>
+                                    ))
                                 )}
                             </tbody>
                         </table>
