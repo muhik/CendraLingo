@@ -3,12 +3,30 @@ import { NextResponse } from "next/server";
 export const runtime = "edge";
 
 export async function POST(req: Request) {
+    // Immediate debug - check env vars first
+    const dbUrl = process.env.TURSO_CONNECTION_URL || "";
+    const dbToken = process.env.TURSO_AUTH_TOKEN || "";
+
+    // Check if env vars exist - return detailed error if not
+    if (!dbUrl) {
+        return NextResponse.json({
+            success: false,
+            error: "TURSO_CONNECTION_URL not configured",
+            debug: "ENV_MISSING"
+        }, { status: 500 });
+    }
+
+    if (!dbToken) {
+        return NextResponse.json({
+            success: false,
+            error: "TURSO_AUTH_TOKEN not configured",
+            debug: "ENV_MISSING"
+        }, { status: 500 });
+    }
+
     try {
-        console.log("📨 [API] Manual Purchase Request received (Raw Fetch Mode)");
         const body = await req.json();
         const { userId, planType, customAmount, paymentMethod } = body;
-
-        console.log("📦 [API] Payload:", { userId, customAmount });
 
         // Validation
         if (!userId || !customAmount) {
@@ -18,11 +36,16 @@ export async function POST(req: Request) {
         // Generate a pseudo Order ID for manual transaction
         const orderId = `M-${Math.random().toString(36).substring(2, 7).toUpperCase()}_${userId}_${Date.now()}`;
 
+        // Convert URL format (libsql:// -> https://)
+        const finalUrl = dbUrl.startsWith("libsql://")
+            ? dbUrl.replace("libsql://", "https://")
+            : dbUrl;
+
         // Prepare SQL - Turso HTTP API requires typed args
         const sql = "INSERT INTO transactions (order_id, user_id, gross_amount, status, payment_type, transaction_time, created_at, json_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         const args = [
             { type: "text", value: orderId },
-            { type: "text", value: userId },
+            { type: "text", value: String(userId) },
             { type: "integer", value: String(customAmount) },
             { type: "text", value: "pending_manual" },
             { type: "text", value: paymentMethod || "manual_transfer" },
@@ -32,16 +55,7 @@ export async function POST(req: Request) {
         ];
 
         // TURSO RAW FETCH
-        const dbUrl = process.env.TURSO_CONNECTION_URL?.replace("libsql://", "https://") || "";
-        const dbToken = process.env.TURSO_AUTH_TOKEN;
-
-        if (!dbUrl || !dbToken) {
-            throw new Error("Missing Database Credentials");
-        }
-
-        console.log("🚀 [API] Executing RAW SQL via HTTP...");
-
-        const response = await fetch(`${dbUrl}/v2/pipeline`, {
+        const response = await fetch(`${finalUrl}/v2/pipeline`, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${dbToken}`,
@@ -57,12 +71,23 @@ export async function POST(req: Request) {
 
         if (!response.ok) {
             const errText = await response.text();
-            console.error("❌ [API] Turso HTTP Error:", errText);
-            throw new Error(`Database Error: ${response.status} ${errText}`);
+            return NextResponse.json({
+                success: false,
+                error: `Database Error: ${response.status}`,
+                detail: errText.substring(0, 200)
+            }, { status: 500 });
         }
 
         const data = await response.json();
-        console.log("✅ [API] Turso Response:", JSON.stringify(data));
+
+        // Check for Turso-level errors
+        if (data.results && data.results[0]?.type === "error") {
+            return NextResponse.json({
+                success: false,
+                error: "Database query failed",
+                detail: JSON.stringify(data.results[0])
+            }, { status: 500 });
+        }
 
         return NextResponse.json({
             success: true,
@@ -70,8 +95,11 @@ export async function POST(req: Request) {
             message: "Manual payment submitted. Waiting for Admin approval."
         });
 
-    } catch (error) {
-        console.error("❌ [API] Manual Purchase Crash:", error);
-        return NextResponse.json({ success: false, error: String(error) }, { status: 500 });
+    } catch (error: any) {
+        return NextResponse.json({
+            success: false,
+            error: error.message || String(error),
+            stack: error.stack?.substring(0, 300)
+        }, { status: 500 });
     }
 }
