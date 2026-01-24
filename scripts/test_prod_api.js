@@ -1,27 +1,20 @@
-// Test ALL methods on manual-purchase endpoint
-async function testAllMethods() {
-    console.log("🔧 Testing ALL HTTP methods on /api/manual-purchase...\n");
+// Test admin page
+async function testAdmin() {
+    console.log("Testing Admin APIs...\n");
 
-    const methods = ["GET", "POST", "OPTIONS"];
+    // Test transactions API
+    console.log("--- /api/admin/transactions ---");
+    const res1 = await fetch("https://cendralingo.my.id/api/admin/transactions");
+    console.log("Status:", res1.status);
+    const data1 = await res1.json();
+    console.log("Transactions count:", data1.data?.length);
+    console.log("First transaction:", JSON.stringify(data1.data?.[0], null, 2));
 
-    for (const method of methods) {
-        console.log(`--- ${method} ---`);
-        try {
-            const opts = { method };
-            if (method === "POST") {
-                opts.headers = { "Content-Type": "application/json" };
-                opts.body = JSON.stringify({ userId: "test", customAmount: 10000 });
-            }
-
-            const res = await fetch("https://cendralingo.my.id/api/manual-purchase", opts);
-            console.log("Status:", res.status);
-            const text = await res.text();
-            console.log("Response:", text.substring(0, 300));
-        } catch (err) {
-            console.error("Error:", err.message);
-        }
-        console.log();
-    }
+    // Test admin page HTML
+    console.log("\n--- /admin page ---");
+    const res2 = await fetch("https://cendralingo.my.id/admin");
+    console.log("Status:", res2.status);
+    console.log("Content-Type:", res2.headers.get("content-type"));
 }
 
-testAllMethods();
+testAdmin();

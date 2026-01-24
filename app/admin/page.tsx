@@ -587,11 +587,11 @@ export default function AdminPage() {
                                     transactions.map((tx) => (
                                         <tr key={tx.order_id} className="border-b hover:bg-slate-50">
                                             <td className="p-4 text-xs font-mono text-slate-500">
-                                                {new Date(tx.created_at).toLocaleString("id-ID")}
+                                                {new Date(Number(tx.created_at)).toLocaleString("id-ID")}
                                             </td>
                                             <td className="p-4 font-mono font-bold text-slate-700">{tx.order_id}</td>
                                             <td className="p-4 text-xs font-mono">{tx.user_id}</td>
-                                            <td className="p-4 font-bold">Rp {tx.gross_amount?.toLocaleString()}</td>
+                                            <td className="p-4 font-bold">Rp {Number(tx.gross_amount || 0).toLocaleString()}</td>
                                             <td className="p-4">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-bold border ${tx.status === 'settlement' || tx.status === 'capture' ? 'bg-green-100 text-green-700 border-green-200' :
                                                     tx.status === 'pending' || tx.status === 'pending_manual' ? 'bg-amber-100 text-amber-700 border-amber-200' :
