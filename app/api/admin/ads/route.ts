@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 // Placeholder route for admin ads
 export async function GET() {

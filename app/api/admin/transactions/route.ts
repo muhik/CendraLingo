@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+export const runtime = "nodejs";
 
 // NOTE: Do NOT use edge runtime or @libsql/client - use raw fetch to Turso HTTP API
 

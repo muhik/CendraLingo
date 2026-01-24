@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+export const runtime = "nodejs";
 import { tursoExecute } from "@/db/turso-http";
 
 // Temporary endpoint to reset password using server-side hashing

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+export const runtime = "nodejs";
 
 // NOTE: Do NOT use "export const runtime = edge" - causes Cloudflare crash!
 

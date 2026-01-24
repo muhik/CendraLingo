@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+export const runtime = "nodejs";
 import { tursoQuery, tursoQueryOne, tursoExecute } from "@/db/turso-http";
 import { cookies } from "next/headers";
 

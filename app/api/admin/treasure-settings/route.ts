@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
+export const runtime = "nodejs";
 
-export const runtime = "edge";
-export const dynamic = "force-dynamic";
+
 
 async function tursoExecute(sql: string, args: any[] = []) {
     const dbUrl = process.env.TURSO_CONNECTION_URL!;
