@@ -6,7 +6,7 @@ const turso = createClient({
     authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 export async function POST(req: Request) {
     try {
