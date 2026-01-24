@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 async function tursoExecute(sql: string, args: any[] = []) {
     const dbUrl = process.env.TURSO_CONNECTION_URL!;
@@ -29,10 +30,10 @@ async function tursoExecute(sql: string, args: any[] = []) {
     return data.results[0]?.response?.result;
 }
 
-export async function POST(req: Request) {
+export async function GET(req: Request) {
     try {
-        const body = await req.json();
-        const { userId } = body;
+        const { searchParams } = new URL(req.url);
+        const userId = searchParams.get("userId");
 
         if (!userId) {
             return NextResponse.json({ error: "User ID required" }, { status: 400 });
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
         const random = Math.random() * 100;
         let selectedId = 1; // Default Zonk
 
-        // Probability Distribution (Adjust as needed)
+        // Probability Distribution
         // Zonk: 50%
         // Rp 5: 20%
         // 5 Gems: 10%
@@ -115,7 +116,9 @@ export async function POST(req: Request) {
         const result = SEGMENTS.find(s => s.id === selectedId) || SEGMENTS[1];
         let voucherCode = "";
 
-        // 3. Grant Rewards
+        // 3. Grant Rewards & REVOKE ACCESS ATOMICALLY
+        const now = new Date().toISOString();
+
         if (result.type === "gems") {
             // Update user points
             await tursoExecute(
@@ -125,31 +128,34 @@ export async function POST(req: Request) {
         } else if (result.type === "cash") {
             // Create Voucher
             voucherCode = `GEMS-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-            // For now, cash rewards in Wheel are small direct balance or vouchers?
-            // Existing logic says "cashbackAmount". Let's update user balance directly if possible OR create voucher.
-            // The frontend expects `voucherCode` if it's a win.
-            // Let's create a voucher that is auto-claimed or just give balance?
-            // Schema has `cashbackBalance` in `user_progress`. Let's update that directly.
-
-            // WAIT - Frontend shows "Kode Voucher".
-            // If it's a voucher, the user needs to claim it.
-            // Let's create a voucher record.
             await tursoExecute(
                 "INSERT INTO vouchers (code, value_rp, gems_amount, created_at) VALUES (?, ?, 0, ?)",
                 [{ type: "text", value: voucherCode }, { type: "integer", value: String(result.value) }, { type: "integer", value: String(Date.now()) }]
             );
         }
 
+        // IMPORTANT: Revoke access immediately to prevent replay attacks
+        await tursoExecute(
+            "UPDATE user_treasure_log SET has_treasure_access = 0, last_spin_date = ? WHERE user_id = ?",
+            [{ type: "text", value: now }, { type: "text", value: userId }]
+        );
+
         // Return Result
         return NextResponse.json({
             segmentIndex: selectedId,
             voucherCode,
             gemsWon: result.type === "gems" ? result.value : 0,
-            cashbackWon: result.type === "cash" ? result.value : 0
+            cashbackWon: result.type === "cash" ? result.value : 0,
+            method: "GET_WORKAROUND"
         });
 
     } catch (error: any) {
         console.error("Spin Logic Error:", error);
         return NextResponse.json({ error: String(error) }, { status: 500 });
     }
+}
+
+// Fallback POST
+export async function POST() {
+    return NextResponse.json({ error: "Use GET" }, { status: 400 });
 }

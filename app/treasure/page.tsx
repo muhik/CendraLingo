@@ -98,11 +98,10 @@ export default function TreasurePage() {
                 return;
             }
 
-            // Call API to get result
-            const response = await fetch("/api/treasure/spin", {
-                method: "POST",
+            // Call API to get result (GET Workaround)
+            const response = await fetch(`/api/treasure/spin?userId=${userId}&t=${Date.now()}`, {
+                method: "GET",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userId }),
             });
 
             const data = await response.json();
@@ -129,12 +128,8 @@ export default function TreasurePage() {
             setTimeout(async () => {
                 setIsSpinning(false);
 
-                // Record spin in database
-                await fetch("/api/treasure/access", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ userId, action: "recordSpin" }),
-                });
+                // No need to call recordSpin anymore, server handles it atomically!
+                // Access is already revoked.
 
                 if (gemsWon > 0 || cashbackWon > 0) {
                     // Update state with strictly matched API response

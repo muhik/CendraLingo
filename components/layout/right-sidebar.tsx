@@ -59,11 +59,10 @@ export const RightSidebar = () => {
             // Case 1: Force Paid4Link Flow (User requirement: "sifatnya tetep"/always required)
             // We set access in database first, then redirect.
 
-            // 1. Set access in database
-            const accessRes = await fetch("/api/treasure/access", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userId, action: "setAccess" }),
+            // 1. Set access in database (Use GET workaround)
+            const accessRes = await fetch(`/api/treasure/access?userId=${userId}&action=setAccess&t=${Date.now()}`, {
+                method: "GET",
+                cache: "no-store",
             });
 
             if (!accessRes.ok) {

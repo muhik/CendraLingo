@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 async function tursoExecute(sql: string, args: any[] = []) {
@@ -34,10 +34,50 @@ export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
         const userId = searchParams.get("userId");
+        const action = searchParams.get("action"); // Supported via GET for workaround
 
         if (!userId) {
             return NextResponse.json({ hasAccess: false, alreadySpunToday: false });
         }
+
+        // === WORKAROUND: Handle Actions via GET (due to Next.js 16 POST 500 Error) ===
+        if (action === "setAccess") {
+            const now = new Date().toISOString();
+            // Check if exists
+            const check = await tursoExecute("SELECT id FROM user_treasure_log WHERE user_id = ?", [{ type: "text", value: userId }]);
+
+            if (check?.rows?.length > 0) {
+                await tursoExecute(
+                    "UPDATE user_treasure_log SET has_treasure_access = 1, treasure_access_date = ? WHERE user_id = ?",
+                    [{ type: "text", value: now }, { type: "text", value: userId }]
+                );
+            } else {
+                await tursoExecute(
+                    "INSERT INTO user_treasure_log (user_id, has_treasure_access, treasure_access_date) VALUES (?, 1, ?)",
+                    [{ type: "text", value: userId }, { type: "text", value: now }]
+                );
+            }
+            return NextResponse.json({ success: true, method: "GET_WORKAROUND" });
+        }
+
+        if (action === "recordSpin") {
+            const now = new Date().toISOString();
+            const check = await tursoExecute("SELECT id FROM user_treasure_log WHERE user_id = ?", [{ type: "text", value: userId }]);
+
+            if (check?.rows?.length > 0) {
+                await tursoExecute(
+                    "UPDATE user_treasure_log SET has_treasure_access = 0, last_spin_date = ? WHERE user_id = ?",
+                    [{ type: "text", value: now }, { type: "text", value: userId }]
+                );
+            } else {
+                await tursoExecute(
+                    "INSERT INTO user_treasure_log (user_id, has_treasure_access, last_spin_date) VALUES (?, 0, ?)",
+                    [{ type: "text", value: userId }, { type: "text", value: now }]
+                );
+            }
+            return NextResponse.json({ success: true, method: "GET_WORKAROUND" });
+        }
+        // =========================================================================
 
         // 1. Get Settings
         const settingsRes = await tursoExecute("SELECT * FROM treasure_settings ORDER BY id DESC LIMIT 1");
@@ -82,7 +122,6 @@ export async function GET(req: Request) {
         let alreadySpunToday = false;
         if (lastSpinDateStr) {
             const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-            // lastSpinDate is expected to be ISO string or date string
             const lastSpin = new Date(lastSpinDateStr).toISOString().split("T")[0];
             if (today === lastSpin) {
                 alreadySpunToday = true;
@@ -106,87 +145,7 @@ export async function GET(req: Request) {
     }
 }
 
+// Keeping POST just in case, but client should use GET
 export async function POST(req: Request) {
-    try {
-        // Debug wrapper for JSON parsing
-        let body;
-        try {
-            body = await req.json();
-            console.log("[API DEBUG] Body parsed:", body);
-        } catch (e: any) {
-            console.error("[API DEBUG] JSON Parse Error:", e);
-            return NextResponse.json({ error: "Invalid JSON Body: " + e.message }, { status: 400 });
-        }
-
-        const { userId, action } = body;
-
-        if (!userId || !action) {
-            console.error("[API DEBUG] Missing fields", { userId, action });
-            return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-        }
-
-        console.log("[API DEBUG] Action:", action, "UserId:", userId);
-
-        if (action === "setAccess") {
-            const now = new Date().toISOString();
-            console.log("[API DEBUG] Executing setAccess, Date:", now);
-
-            // Check if exists
-            try {
-                const check = await tursoExecute("SELECT id FROM user_treasure_log WHERE user_id = ?", [{ type: "text", value: userId }]);
-                console.log("[API DEBUG] Check Result Rows:", check?.rows?.length);
-
-                if (check?.rows?.length > 0) {
-                    console.log("[API DEBUG] Updating existing record...");
-                    await tursoExecute(
-                        "UPDATE user_treasure_log SET has_treasure_access = 1, treasure_access_date = ? WHERE user_id = ?",
-                        [{ type: "text", value: now }, { type: "text", value: userId }]
-                    );
-                } else {
-                    console.log("[API DEBUG] Inserting new record...");
-                    await tursoExecute(
-                        "INSERT INTO user_treasure_log (user_id, has_treasure_access, treasure_access_date) VALUES (?, 1, ?)",
-                        [{ type: "text", value: userId }, { type: "text", value: now }]
-                    );
-                }
-                console.log("[API DEBUG] setAccess Success");
-                return NextResponse.json({ success: true });
-            } catch (dbError: any) {
-                console.error("[API DEBUG] DB Error in setAccess:", dbError);
-                return NextResponse.json({ error: "DB Error: " + dbError.message }, { status: 500 }); // Return JSON even on error
-            }
-        }
-
-        if (action === "recordSpin") {
-            // ... (keep similar logic)
-            const now = new Date().toISOString();
-            console.log("[API DEBUG] Executing recordSpin");
-            try {
-                const check = await tursoExecute("SELECT id FROM user_treasure_log WHERE user_id = ?", [{ type: "text", value: userId }]);
-
-                if (check?.rows?.length > 0) {
-                    await tursoExecute(
-                        "UPDATE user_treasure_log SET has_treasure_access = 0, last_spin_date = ? WHERE user_id = ?",
-                        [{ type: "text", value: now }, { type: "text", value: userId }]
-                    );
-                } else {
-                    await tursoExecute(
-                        "INSERT INTO user_treasure_log (user_id, has_treasure_access, last_spin_date) VALUES (?, 0, ?)",
-                        [{ type: "text", value: userId }, { type: "text", value: now }]
-                    );
-                }
-                console.log("[API DEBUG] recordSpin Success");
-                return NextResponse.json({ success: true });
-            } catch (dbError: any) {
-                console.error("[API DEBUG] DB Error in recordSpin:", dbError);
-                return NextResponse.json({ error: "DB Error: " + dbError.message }, { status: 500 });
-            }
-        }
-
-        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-
-    } catch (error: any) {
-        console.error("Access Action CRITICAL Error:", error);
-        return NextResponse.json({ error: "CRITICAL: " + String(error) }, { status: 500 });
-    }
+    return NextResponse.json({ error: "Please use GET with action param" }, { status: 400 });
 }
