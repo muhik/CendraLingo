@@ -57,7 +57,10 @@ export const ShopItem = ({
 
             <Button
                 disabled={!canBuy || hasActive}
-                onClick={onBuy}
+                onClick={() => {
+                    console.log("🖱️ [DEBUG] ShopItem Button Clicked!");
+                    onBuy();
+                }}
                 className="w-full rounded-xl border-b-4 h-[45px] active:border-b-0 font-bold"
                 variant={priceText ? "primary" : "default"}
             >

@@ -171,10 +171,15 @@ function ShopContent() {
     const [useManualPayment, setUseManualPayment] = useState(false); // Toggle state
 
     const handleBuyGems = async (amount: number, priceRp: string) => {
-        if (isProcessing) return;
+        console.log("💎 [DEBUG] Buy Gems Clicked!", amount, priceRp);
+        if (isProcessing) {
+            console.log("⚠️ [DEBUG] Processing is locked.");
+            return;
+        }
 
         // Strip non-numeric
         const numericPrice = parseInt(priceRp.replace(/[^0-9]/g, ""), 10);
+        console.log("💰 [DEBUG] Mode:", useManualPayment ? "Manual" : "Midtrans");
 
         if (useManualPayment) {
             // MANUAL FLOW
