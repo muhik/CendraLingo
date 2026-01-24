@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { tursoQuery, tursoExecute } from "@/db/turso-http";
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 // --------------------------------------------------------------------------------
 // GET HANDLERS
