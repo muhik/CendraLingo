@@ -1,21 +1,20 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "edge";
+// NOTE: Removed "export const runtime = edge" - testing if this causes the crash
 
-// Extremely minimal API - just return success immediately
+// Minimal test - just return success
 export async function POST(req: Request) {
     return NextResponse.json({
         success: true,
-        message: "API is working",
+        message: "API is working (no edge runtime)",
         timestamp: Date.now()
     });
 }
 
-// Also add GET for easy browser testing
 export async function GET() {
     return NextResponse.json({
         success: true,
-        message: "Manual Purchase API is alive",
+        message: "Manual Purchase API is alive (no edge runtime)",
         timestamp: Date.now()
     });
 }
