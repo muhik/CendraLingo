@@ -3,58 +3,36 @@ import { NextResponse } from "next/server";
 export const runtime = "edge";
 
 export async function POST(req: Request) {
-    // Immediate debug - check env vars first
-    const dbUrl = process.env.TURSO_CONNECTION_URL || "";
-    const dbToken = process.env.TURSO_AUTH_TOKEN || "";
-
-    // Check if env vars exist - return detailed error if not
-    if (!dbUrl) {
-        return NextResponse.json({
-            success: false,
-            error: "TURSO_CONNECTION_URL not configured",
-            debug: "ENV_MISSING"
-        }, { status: 500 });
-    }
-
-    if (!dbToken) {
-        return NextResponse.json({
-            success: false,
-            error: "TURSO_AUTH_TOKEN not configured",
-            debug: "ENV_MISSING"
-        }, { status: 500 });
-    }
+    // STEP 1: Basic response test
+    let step = "init";
 
     try {
+        step = "parsing_body";
         const body = await req.json();
-        const { userId, planType, customAmount, paymentMethod } = body;
+        const { userId, customAmount } = body;
 
-        // Validation
+        step = "validation";
         if (!userId || !customAmount) {
-            return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
+            return NextResponse.json({ success: false, error: "Missing fields", step }, { status: 400 });
         }
 
-        // Generate a pseudo Order ID for manual transaction
-        const orderId = `M-${Math.random().toString(36).substring(2, 7).toUpperCase()}_${userId}_${Date.now()}`;
+        step = "check_env";
+        const dbUrl = process.env.TURSO_CONNECTION_URL || "";
+        const dbToken = process.env.TURSO_AUTH_TOKEN || "";
 
-        // Convert URL format (libsql:// -> https://)
+        if (!dbUrl || !dbToken) {
+            return NextResponse.json({ success: false, error: "Missing env vars", step, hasUrl: !!dbUrl, hasToken: !!dbToken }, { status: 500 });
+        }
+
+        step = "generate_order";
+        const orderId = `M-${Date.now()}-${userId.substring(0, 5)}`;
+
+        step = "prepare_fetch";
         const finalUrl = dbUrl.startsWith("libsql://")
             ? dbUrl.replace("libsql://", "https://")
             : dbUrl;
 
-        // Prepare SQL - Turso HTTP API requires typed args
-        const sql = "INSERT INTO transactions (order_id, user_id, gross_amount, status, payment_type, transaction_time, created_at, json_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        const args = [
-            { type: "text", value: orderId },
-            { type: "text", value: String(userId) },
-            { type: "integer", value: String(customAmount) },
-            { type: "text", value: "pending_manual" },
-            { type: "text", value: paymentMethod || "manual_transfer" },
-            { type: "text", value: new Date().toISOString() },
-            { type: "integer", value: String(Date.now()) },
-            { type: "text", value: JSON.stringify({ planType, note: "User claimed they have transferred manually." }) }
-        ];
-
-        // TURSO RAW FETCH
+        step = "doing_fetch";
         const response = await fetch(`${finalUrl}/v2/pipeline`, {
             method: "POST",
             headers: {
@@ -63,43 +41,45 @@ export async function POST(req: Request) {
             },
             body: JSON.stringify({
                 requests: [
-                    { type: "execute", stmt: { sql, args } },
+                    {
+                        type: "execute",
+                        stmt: {
+                            sql: "INSERT INTO transactions (order_id, user_id, gross_amount, status, payment_type, transaction_time, created_at, json_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                            args: [
+                                { type: "text", value: orderId },
+                                { type: "text", value: String(userId) },
+                                { type: "integer", value: String(customAmount) },
+                                { type: "text", value: "pending_manual" },
+                                { type: "text", value: "manual_transfer" },
+                                { type: "text", value: new Date().toISOString() },
+                                { type: "integer", value: String(Date.now()) },
+                                { type: "text", value: "{}" }
+                            ]
+                        }
+                    },
                     { type: "close" },
                 ],
             }),
         });
 
+        step = "checking_response";
         if (!response.ok) {
             const errText = await response.text();
-            return NextResponse.json({
-                success: false,
-                error: `Database Error: ${response.status}`,
-                detail: errText.substring(0, 200)
-            }, { status: 500 });
+            return NextResponse.json({ success: false, error: "DB Error", status: response.status, detail: errText.substring(0, 100), step }, { status: 500 });
         }
 
+        step = "parsing_response";
         const data = await response.json();
 
-        // Check for Turso-level errors
-        if (data.results && data.results[0]?.type === "error") {
-            return NextResponse.json({
-                success: false,
-                error: "Database query failed",
-                detail: JSON.stringify(data.results[0])
-            }, { status: 500 });
-        }
-
-        return NextResponse.json({
-            success: true,
-            orderId,
-            message: "Manual payment submitted. Waiting for Admin approval."
-        });
+        step = "done";
+        return NextResponse.json({ success: true, orderId, step, dbResponse: data.results?.[0]?.type });
 
     } catch (error: any) {
         return NextResponse.json({
             success: false,
-            error: error.message || String(error),
-            stack: error.stack?.substring(0, 300)
+            error: error.message,
+            step,
+            name: error.name
         }, { status: 500 });
     }
 }
