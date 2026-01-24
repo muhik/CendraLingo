@@ -73,38 +73,51 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { paid4linkUrl, isEnabled, requirePaid4link } = body;
 
-        // Ensure at least one row exists, otherwise insert
-        // SQLite doesn't have UPSERT in generic way easily without unique constraint on single row table,
-        // so we check count or just insert new one (taking latest).
-        // Better: Update if exists, else insert.
-
         const check = await tursoExecute("SELECT id FROM treasure_settings ORDER BY id DESC LIMIT 1");
 
-        if (check?.rows?.length > 0) {
-            const id = check.rows[0][0].value;
-            await tursoExecute(
-                "UPDATE treasure_settings SET paid4link_url = ?, is_enabled = ?, require_paid4link = ?, updated_at = ? WHERE id = ?",
-                [
-                    { type: "text", value: paid4linkUrl || "" },
-                    { type: "integer", value: isEnabled ? "1" : "0" },
-                    { type: "integer", value: requirePaid4link ? "1" : "0" },
-                    { type: "integer", value: String(Date.now()) },
-                    { type: "integer", value: String(id) }
-                ]
-            );
-        } else {
-            await tursoExecute(
-                "INSERT INTO treasure_settings (paid4link_url, is_enabled, require_paid4link, updated_at) VALUES (?, ?, ?, ?)",
-                [
-                    { type: "text", value: paid4linkUrl || "" },
-                    { type: "integer", value: isEnabled ? "1" : "0" },
-                    { type: "integer", value: requirePaid4link ? "1" : "0" },
-                    { type: "integer", value: String(Date.now()) }
-                ]
-            );
+        const performUpdate = async () => {
+            if (check?.rows?.length > 0) {
+                const id = check.rows[0][0].value;
+                await tursoExecute(
+                    "UPDATE treasure_settings SET paid4link_url = ?, is_enabled = ?, require_paid4link = ?, updated_at = ? WHERE id = ?",
+                    [
+                        { type: "text", value: paid4linkUrl || "" },
+                        { type: "integer", value: isEnabled ? "1" : "0" },
+                        { type: "integer", value: requirePaid4link ? "1" : "0" },
+                        { type: "integer", value: String(Date.now()) },
+                        { type: "integer", value: String(id) }
+                    ]
+                );
+            } else {
+                await tursoExecute(
+                    "INSERT INTO treasure_settings (paid4link_url, is_enabled, require_paid4link, updated_at) VALUES (?, ?, ?, ?)",
+                    [
+                        { type: "text", value: paid4linkUrl || "" },
+                        { type: "integer", value: isEnabled ? "1" : "0" },
+                        { type: "integer", value: requirePaid4link ? "1" : "0" },
+                        { type: "integer", value: String(Date.now()) }
+                    ]
+                );
+            }
+        };
+
+        try {
+            await performUpdate();
+        } catch (updateError: any) {
+            console.error("Initial Update Failed, attempting Repair:", updateError);
+            // If failed, assume column missing. Try adding it.
+            try {
+                await tursoExecute("ALTER TABLE treasure_settings ADD COLUMN paid4link_url TEXT");
+                console.log("Auto-Repair: Added paid4link_url column");
+                // Retry Update
+                await performUpdate();
+            } catch (repairError) {
+                console.error("Repair Failed:", repairError);
+                throw updateError; // Throw original error if repair fails
+            }
         }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, repaired: true });
 
     } catch (error: any) {
         console.error("Save Settings Error:", error);
