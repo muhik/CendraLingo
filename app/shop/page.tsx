@@ -505,14 +505,16 @@ function ShopContent() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                name="Streak Freeze"
-                                description="Jaga streak-mu tetap aman meskipun absen sehari."
-                                Icon={Flame}
-                                iconColor="text-orange-500 fill-orange-500"
-                                price={2000}
-                                points={points}
-                                hasActive={false}
-                                onBuy={handleBuyFreeze}
+                                <ShopItem
+                                    name="Streak Freeze"
+                                    description="Jaga streak-mu tetap aman meskipun absen sehari."
+                                    Icon={Flame}
+                                    iconColor="text-orange-500 fill-orange-500"
+                                    price={2000}
+                                    points={points}
+                                    hasActive={false}
+                                    activeTitle="BEKU SIHIR"
+                                    onBuy={handleBuyFreeze}
                                 />
                             </div>
                         </div>
