@@ -59,7 +59,7 @@ export default function TreasurePage() {
 
         const checkAccess = async () => {
             try {
-                const res = await fetch(`/api/treasure/access?userId=${userId}`);
+                const res = await fetch(`/api/treasure/access?userId=${userId}&t=${Date.now()}`);
                 const data = await res.json();
 
                 if (!data.hasAccess) {
