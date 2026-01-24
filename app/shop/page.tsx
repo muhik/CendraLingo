@@ -241,6 +241,15 @@ function ShopContent() {
                     paymentMethod: "MANUAL_TRANSFER"
                 })
             });
+
+            // Handle non-OK responses first
+            if (!res.ok) {
+                const errorText = await res.text();
+                console.error("API Error Response:", res.status, errorText);
+                toast.error(`Error ${res.status}: ${errorText.substring(0, 100)}`);
+                return;
+            }
+
             const data = await res.json();
             if (data.success) {
                 toast.success("Konfirmasi Terkirim! Mohon tunggu verifikasi Admin (max 24 jam).");
@@ -248,8 +257,9 @@ function ShopContent() {
             } else {
                 toast.error("Gagal mengirim konfirmasi: " + data.error);
             }
-        } catch (error) {
-            toast.error("Terjadi kesalahan koneksi.");
+        } catch (error: any) {
+            console.error("Manual Payment Error:", error);
+            toast.error("Terjadi kesalahan: " + (error.message || String(error)));
         } finally {
             setIsProcessing(false);
         }
