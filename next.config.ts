@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Silence Turbopack warning when using custom webpack config
-  turbopack: {},
+  // Silence Turbopack warning when using custom webpack config
+
 
   // Exclude better-sqlite3 from bundling (Node only)
   serverExternalPackages: ["better-sqlite3"],
