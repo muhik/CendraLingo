@@ -129,17 +129,20 @@ export default function AdminPage() {
         fetch(`/api/admin/transactions?page=${transPage}`)
             .then(res => res.json())
             .then(data => {
-                setTransactions(data.data || []);
+                setTransactions(Array.isArray(data.data) ? data.data : []);
                 setTransTotalPages(data.pagination?.totalPages || 1);
             })
-            .catch(console.error);
+            .catch(err => {
+                console.error("Fetch transactions error:", err);
+                setTransactions([]);
+            });
     };
 
     const fetchSecurityLogs = () => {
         fetch(`/api/admin/security/logs?page=${securityPage}`)
             .then(res => res.json())
             .then(data => {
-                setSecurityLogs(data.data || []);
+                setSecurityLogs(Array.isArray(data.data) ? data.data : []);
                 setSecurityTotalPages(data.pagination?.totalPages || 1);
             })
             .catch(console.error);
@@ -149,7 +152,7 @@ export default function AdminPage() {
         fetch("/api/admin/ads")
             .then(res => res.json())
             .then(data => {
-                if (data.id) {
+                if (data && data.id) {
                     setAdSettings({
                         type: data.type || 'image',
                         script_code: data.script_code || '',
@@ -201,8 +204,20 @@ export default function AdminPage() {
     const fetchUsers = () => {
         fetch("/api/admin/users")
             .then(res => res.json())
-            .then(setUsers)
-            .catch(console.error);
+            .then(data => {
+                // SAFETY CHECK: Ensure data is an array before setting state
+                // This prevents .filter() crashes if API returns { error: ... }
+                if (Array.isArray(data)) {
+                    setUsers(data);
+                } else {
+                    console.error("Users API returned non-array:", data);
+                    setUsers([]);
+                }
+            })
+            .catch(err => {
+                console.error("Fetch users error:", err);
+                setUsers([]);
+            });
     };
 
     const fetchVouchers = () => {
@@ -216,7 +231,7 @@ export default function AdminPage() {
         fetch(`/api/admin/vouchers?${params.toString()}`)
             .then(res => res.json())
             .then(res => {
-                setAdminVouchers(res?.data || []);
+                setAdminVouchers(Array.isArray(res?.data) ? res.data : []);
                 setTotalPages(res?.pagination?.totalPages || 1);
             })
             .catch(err => {
@@ -237,7 +252,7 @@ export default function AdminPage() {
         fetch(`/api/admin/claims?${params.toString()}`)
             .then(res => res.json())
             .then(res => {
-                setAlerts(res?.data || []);
+                setAlerts(Array.isArray(res?.data) ? res.data : []);
                 setClaimsTotalPages(res?.pagination?.totalPages || 1);
                 setTotalCashback(res?.summary?.totalCashback || 0);
             })
@@ -258,7 +273,7 @@ export default function AdminPage() {
         fetch(`/api/admin/feedback?${params.toString()}`)
             .then(res => res.json())
             .then(res => {
-                setFeedbacks(res?.data || []);
+                setFeedbacks(Array.isArray(res?.data) ? res.data : []);
                 setFeedbackTotalPages(res?.pagination?.totalPages || 1);
             })
             .catch(console.error);
@@ -268,7 +283,7 @@ export default function AdminPage() {
         fetch("/api/admin/redeem")
             .then(res => res.json())
             .then(res => {
-                setRedeemRequests(res?.requests || []);
+                setRedeemRequests(Array.isArray(res?.requests) ? res.requests : []);
                 setPendingRedeemCount(res?.pendingCount || 0);
             })
             .catch(err => {
@@ -309,8 +324,8 @@ export default function AdminPage() {
 
     useEffect(() => {
         if (isAuthenticated) {
-            // Fetch Users
-            fetch("/api/admin/users").then(res => res.json()).then(setUsers);
+            // Fetch Users - MOVED to safe function
+            fetchUsers();
             // Fetch Claims (with pagination)
             fetchClaims();
         }
