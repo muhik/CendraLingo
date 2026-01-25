@@ -1,11 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
-// FORCE DYNAMIC & NODEJS RUNTIME (CRITICAL FIX)
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Copy, Plus, RefreshCw, ShieldCheck, Users, Ticket, AlertTriangle, Search, Wallet, CheckCircle, XCircle, Settings, Megaphone, Bell, Trash2 } from "lucide-react";
@@ -21,7 +16,7 @@ interface Voucher {
     cashbackAmount: number;
     isClaimed: boolean;
     claimedBy: string | null;
-    createdAt: string;
+    createdAt: string; // NEW
 }
 
 interface UserData {
@@ -64,17 +59,17 @@ export default function AdminPage() {
     const [activeTab, setActiveTab] = useState<"users" | "vouchers" | "redeem" | "treasure" | "feedback" | "ads" | "security" | "transactions">("vouchers");
 
     // Data State
-    const [vouchers, setVouchers] = useState<Voucher[]>([]);
+    const [vouchers, setVouchers] = useState<Voucher[]>([]); // Should fetch from API ideally
     const [users, setUsers] = useState<UserData[]>([]);
     const [generatedVouchers, setGeneratedVouchers] = useState<Voucher[]>([]);
-    const [alerts, setAlerts] = useState<any[]>([]);
+    const [alerts, setAlerts] = useState<any[]>([]); // NEW: 1K Claims
 
     // Gen State
     const [qty, setQty] = useState(10);
     const [denom, setDenom] = useState(10000);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Voucher Management State
+    // Voucher Management State (Correct Position)
     const [adminVouchers, setAdminVouchers] = useState<Voucher[]>([]);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -91,7 +86,7 @@ export default function AdminPage() {
     // Redeem Requests State
     const [redeemRequests, setRedeemRequests] = useState<RedeemRequest[]>([]);
     const [pendingRedeemCount, setPendingRedeemCount] = useState(0);
-    const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+    const [feedbacks, setFeedbacks] = useState<Feedback[]>([]); // NEW
     const [feedbackPage, setFeedbackPage] = useState(1);
     const [feedbackTotalPages, setFeedbackTotalPages] = useState(1);
     const [feedbackStartDate, setFeedbackStartDate] = useState("");
@@ -425,6 +420,12 @@ export default function AdminPage() {
         }
     };
 
+    // Filter Alert Claims (1K Vouchers)
+    // In a real app, we would fetch claimed vouchers from API. 
+    // Here we will just simulate/placeholder or use checking generatedVouchers if they were claimed.
+    // Since generatedVouchers is only local session, we lack a global voucher fetch API for this demo.
+    // I will add a "Pro Tip" about this.
+
     if (!isAuthenticated) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-100">
@@ -449,7 +450,7 @@ export default function AdminPage() {
                 <div className="flex items-center gap-4">
                     <div>
                         <h1 className="text-3xl font-bold text-slate-800">🛠️ Cendra Admin CMS</h1>
-                        <p className="text-slate-500">Pusat Kontrol & Cetak Uang (Authorized: Node.js/Dynamic)</p>
+                        <p className="text-slate-500">Pusat Kontrol & Cetak Uang</p>
                     </div>
                     {/* Course Completion Alert Bell */}
                     {users.filter(u => u.isCourseCompleted).length > 0 && (
