@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/libsql";
-import { createClient } from "@libsql/client/http";
+import { createClient } from "@libsql/client";
 import * as schema from "./schema";
 
 // Use HTTP client which is more compatible with edge runtimes

@@ -52,7 +52,7 @@ export async function GET() {
 
         // Use snake_case keys (drizzle schema default) or try mapping to what we need
         const result = {
-            is_active: (data["is_active"] === 1) || (data["isactive"] === 1),
+            is_active: (data["is_active"] == 1) || (data["isactive"] == 1),
             type: data["type"] || "image",
             image_url: data["image_url"] || data["imageurl"] || "",
             target_url: data["target_url"] || data["targeturl"] || "",
