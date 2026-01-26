@@ -69,11 +69,21 @@ export const AdSidebar = () => {
             <div className="text-gray-500 text-xs font-bold uppercase tracking-widest text-center mb-2">Partner Info</div>
 
             {ad.type === 'script' ? (
-                <div
-                    ref={scriptContainerRef}
-                    className="w-full min-h-[300px] bg-white/5 rounded-xl flex items-center justify-center overflow-hidden border border-white/10"
-                >
-                    {/* Scripts injected here */}
+                <div className="w-full min-h-[600px] bg-white/5 rounded-xl flex items-center justify-center overflow-hidden border border-white/10">
+                    <iframe
+                        srcDoc={`
+                            <html>
+                                <body style="margin:0;padding:0;display:flex;justify-content:center;align-items:center;">
+                                    ${ad.script_code}
+                                    <style>img { max-width: 100%; height: auto; }</style>
+                                </body>
+                            </html>
+                        `}
+                        className="w-full h-[600px] border-none overflow-hidden"
+                        // Allow scripts but restrict other dangerous actions
+                        sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
+                        title="Partner Content"
+                    />
                 </div>
             ) : (
                 <div className="flex flex-col gap-4">
