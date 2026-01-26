@@ -751,7 +751,7 @@ export default function AdminPage() {
                                                             <td className={`p-4 font-mono font-bold ${v.isClaimed ? "line-through text-slate-400" : "text-sky-700"}`}>
                                                                 {v.code}
                                                             </td>
-                                                            <td className="p-4">Rp {v.valueRp.toLocaleString()}</td>
+                                                            <td className="p-4">Rp {Number(v.valueRp || 0).toLocaleString()}</td>
                                                             <td className="p-4">
                                                                 {v.isClaimed ? (
                                                                     <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-bold border border-red-200">
@@ -820,7 +820,7 @@ export default function AdminPage() {
                                     {/* Total Cashback Summary */}
                                     <div className="bg-green-50 border border-green-200 rounded-lg p-2 mb-3 flex justify-between items-center">
                                         <span className="text-xs text-green-700">Total Bayar Periode Ini:</span>
-                                        <span className="font-bold text-green-800">Rp {totalCashback.toLocaleString()}</span>
+                                        <span className="font-bold text-green-800">Rp {Number(totalCashback || 0).toLocaleString()}</span>
                                     </div>
 
                                     <div className="space-y-2 max-h-[300px] overflow-y-auto">
@@ -846,12 +846,12 @@ export default function AdminPage() {
                                                             </span>
                                                             <div className="text-right">
                                                                 <span className="text-xs font-mono bg-green-100 text-green-700 px-1 rounded font-bold">
-                                                                    Bayar: Rp {alert.cashbackAmount?.toLocaleString() || 0}
+                                                                    Bayar: Rp {Number(alert.cashbackAmount || 0).toLocaleString()}
                                                                 </span>
                                                             </div>
                                                         </div>
                                                         <span className="text-xs text-slate-500 mt-1">
-                                                            Voucher {alert.valueRp?.toLocaleString()} • Kode: <span className="font-mono text-slate-700 font-bold">{alert.code}</span>
+                                                            Voucher {Number(alert.valueRp || 0).toLocaleString()} • Kode: <span className="font-mono text-slate-700 font-bold">{alert.code}</span>
                                                             {alert.claimedAt && (
                                                                 <span className="ml-2 text-slate-400">
                                                                     • {new Date(alert.claimedAt).toLocaleDateString("id-ID")}
@@ -1059,7 +1059,7 @@ export default function AdminPage() {
                                                     {r.accountName && <span className="block text-xs text-slate-400">{r.accountName}</span>}
                                                 </td>
                                                 <td className="p-4 font-bold text-orange-500">{r.gemsAmount} 💎</td>
-                                                <td className="p-4 font-bold text-green-600">Rp {r.rupiahAmount.toLocaleString()}</td>
+                                                <td className="p-4 font-bold text-green-600">Rp {Number(r.rupiahAmount || 0).toLocaleString()}</td>
                                                 <td className="p-4">
                                                     {r.status === "pending" && (
                                                         <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-bold border border-yellow-200">
