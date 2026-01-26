@@ -19,6 +19,15 @@ export const RightSidebar = () => {
     const [hasAccess, setHasAccess] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isNavigating, setIsNavigating] = useState(false);
+    const [adData, setAdData] = useState<any>(null);
+
+    // Fetch Ad Settings
+    useEffect(() => {
+        fetch("/api/ads")
+            .then(res => res.json())
+            .then(data => setAdData(data))
+            .catch(err => console.error("Failed to fetch ads:", err));
+    }, []);
 
     // Check access on mount
     useEffect(() => {
@@ -189,6 +198,40 @@ export const RightSidebar = () => {
             </div>
 
             {/* Ads Widget */}
+            {!isLoading && adData?.is_active && (
+                <div className="bg-white/5 rounded-2xl p-4 border border-white/10 overflow-hidden">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sponsored</span>
+                    </div>
+
+                    {adData.type === 'image' && adData.image_url ? (
+                        <a
+                            href={adData.target_url || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block group relative overflow-hidden rounded-lg"
+                        >
+                            <img
+                                src={adData.image_url}
+                                alt="Ad"
+                                className="w-full h-auto object-cover transition-transform group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                        </a>
+                    ) : adData.type === 'script' && adData.script_code ? (
+                        <div className="w-full flex justify-center overflow-hidden">
+                            {/* 
+                                Safe Script Injection for Adsterra/Ads.
+                                We use a unique ID to prevent React hydration mismatches.
+                            */}
+                            <div
+                                dangerouslySetInnerHTML={{ __html: adData.script_code }}
+                                className="ad-container"
+                            />
+                        </div>
+                    ) : null}
+                </div>
+            )}
 
 
             {/* Daily Quests Widget */}
