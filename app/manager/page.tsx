@@ -943,7 +943,7 @@ export default function AdminPage() {
                                 {(users || []).map((u) => (
                                     <tr key={u.userId} className="border-b hover:bg-slate-50">
                                         <td className="p-4 font-mono text-xs text-slate-500">
-                                            {u.userId.substring(0, 8)}...
+                                            {(u.userId || "Unknown").substring(0, 8)}...
                                             <span className="block text-xs font-bold text-slate-700">{u.userName}</span>
                                         </td>
                                         <td className="p-4">
@@ -1049,7 +1049,7 @@ export default function AdminPage() {
                                                 </td>
                                                 <td className="p-4">
                                                     <span className="font-bold text-slate-700">{r.userName}</span>
-                                                    <span className="block text-xs text-slate-400 font-mono">{r.userId.substring(0, 8)}...</span>
+                                                    <span className="block text-xs text-slate-400 font-mono">{(r.userId || "").substring(0, 8)}...</span>
                                                 </td>
                                                 <td className="p-4">
                                                     <span className="uppercase font-bold text-slate-600">{r.paymentMethod}</span>
@@ -1251,7 +1251,7 @@ export default function AdminPage() {
                                                 </td>
                                                 <td className="p-4">
                                                     <div className="font-bold text-slate-700">{f.user_name}</div>
-                                                    <div className="text-xs text-slate-400 font-mono">{f.user_id.substring(0, 8)}...</div>
+                                                    <div className="text-xs text-slate-400 font-mono">{(f.user_id || "").substring(0, 8)}...</div>
                                                 </td>
                                                 <td className="p-4">
                                                     {f.type === 'saran' && <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">SARAN</span>}
@@ -1439,7 +1439,7 @@ export default function AdminPage() {
                                                 <td className="p-4 font-bold text-slate-700">{log.event_type}</td>
                                                 <td className="p-4">
                                                     <div className="font-bold text-slate-700">{log.user_name}</div>
-                                                    <div className="text-xs text-slate-400 font-mono">{log.user_id.substring(0, 8)}...</div>
+                                                    <div className="text-xs text-slate-400 font-mono">{(log.user_id || "").substring(0, 8)}...</div>
                                                 </td>
                                                 <td className="p-4 text-slate-600 max-w-md">{log.description}</td>
                                             </tr>
