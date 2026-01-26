@@ -219,14 +219,38 @@ export const RightSidebar = () => {
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                         </a>
                     ) : adData.type === 'script' && adData.script_code ? (
-                        <div className="w-full flex justify-center overflow-hidden">
+                        <div className="w-full flex justify-center overflow-hidden bg-black/5 rounded-lg">
                             {/* 
-                                Safe Script Injection for Adsterra/Ads.
-                                We use a unique ID to prevent React hydration mismatches.
+                                Use an Iframe to support document.write() used by Adsterra 
+                                and prevent React hydration issues or script blocking.
                             */}
-                            <div
-                                dangerouslySetInnerHTML={{ __html: adData.script_code }}
-                                className="ad-container"
+                            <iframe
+                                srcDoc={`
+                                    <html>
+                                        <body style="margin:0;padding:0;display:flex;justify-content:center;align-items:center;">
+                                            ${adData.script_code}
+                                            <style>img { max-width: 100%; height: auto; }</style>
+                                        </body>
+                                    </html>
+                                `}
+                                className="w-full border-none overflow-hidden"
+                                style={{ minHeight: "280px", height: "auto" }}
+                                // Allow scripts but restrict other dangerous actions
+                                sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
+                                title="Sponsored Content"
+                                onLoad={(e) => {
+                                    // Optional: Auto-resize handling if needed, though hazardous cross-origin
+                                    // For 160x600, checking the content height is tricky if opaque.
+                                    // We will set a default acceptable height or let user scroll if needed.
+                                    // For now, let's assume standard banner height or taller.
+                                    const target = e.currentTarget;
+                                    if (adData.script_code.includes('160') && adData.script_code.includes('600')) {
+                                        target.style.height = "600px";
+                                    } else if (adData.script_code.includes('height') && adData.script_code.includes('width')) {
+                                        // rudimentary parsing
+                                        target.style.height = "300px";
+                                    }
+                                }}
                             />
                         </div>
                     ) : null}
