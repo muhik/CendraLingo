@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Zap, Trophy, Target, Gem } from "lucide-react";
 import { useUserProgress } from "@/store/use-user-progress";
 import { UserProgress } from "@/components/learn/user-progress";
+import { ScriptRenderer } from "@/components/ads/script-renderer";
 
 import { useState, useEffect } from "react";
 
@@ -25,7 +26,18 @@ export const RightSidebar = () => {
     useEffect(() => {
         fetch("/api/ads")
             .then(res => res.json())
-            .then(data => setAdData(data))
+            .then(data => {
+                // API now returns an array of active ads. We need to pick one for the sidebar.
+                // Priority: Placement 'sidebar' (if exists in future) -> or just pick random/first enabled ad.
+                if (Array.isArray(data) && data.length > 0) {
+                    // Filter for sidebar compatible ads if needed, or just take the first one
+                    const sidebarAd = data.find((ad: any) => ad.placement === 'sidebar') || data[0];
+                    setAdData(sidebarAd);
+                } else if (!Array.isArray(data) && data.id) {
+                    // Fallback for legacy single object response
+                    setAdData(data);
+                }
+            })
             .catch(err => console.error("Failed to fetch ads:", err));
     }, []);
 
@@ -219,39 +231,8 @@ export const RightSidebar = () => {
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                         </a>
                     ) : adData.type === 'script' && adData.script_code ? (
-                        <div className="w-full flex justify-center overflow-hidden bg-black/5 rounded-lg">
-                            {/* 
-                                Use an Iframe to support document.write() used by Adsterra 
-                                and prevent React hydration issues or script blocking.
-                            */}
-                            <iframe
-                                srcDoc={`
-                                    <html>
-                                        <body style="margin:0;padding:0;display:flex;justify-content:center;align-items:center;">
-                                            ${adData.script_code}
-                                            <style>img { max-width: 100%; height: auto; }</style>
-                                        </body>
-                                    </html>
-                                `}
-                                className="w-full border-none overflow-hidden"
-                                style={{ minHeight: "280px", height: "auto" }}
-                                // Allow scripts but restrict other dangerous actions
-                                sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
-                                title="Sponsored Content"
-                                onLoad={(e) => {
-                                    // Optional: Auto-resize handling if needed, though hazardous cross-origin
-                                    // For 160x600, checking the content height is tricky if opaque.
-                                    // We will set a default acceptable height or let user scroll if needed.
-                                    // For now, let's assume standard banner height or taller.
-                                    const target = e.currentTarget;
-                                    if (adData.script_code.includes('160') && adData.script_code.includes('600')) {
-                                        target.style.height = "600px";
-                                    } else if (adData.script_code.includes('height') && adData.script_code.includes('width')) {
-                                        // rudimentary parsing
-                                        target.style.height = "300px";
-                                    }
-                                }}
-                            />
+                        <div className="w-full flex justify-center bg-black/5 rounded-lg min-h-[300px]">
+                            <ScriptRenderer html={adData.script_code} />
                         </div>
                     ) : null}
                 </div>
