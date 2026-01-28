@@ -765,7 +765,7 @@ export default function ManagerPage() {
                                                             <td className={`p-4 font-mono font-bold ${v.isClaimed ? "line-through text-slate-400" : "text-sky-700"}`}>
                                                                 {v.code}
                                                             </td>
-                                                            <td className="p-4">Rp {v.valueRp.toLocaleString()}</td>
+                                                            <td className="p-4">Rp {Number(v.valueRp || 0).toLocaleString()}</td>
                                                             <td className="p-4">
                                                                 {v.isClaimed ? (
                                                                     <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-bold border border-red-200">
@@ -1073,7 +1073,7 @@ export default function ManagerPage() {
                                                     {r.accountName && <span className="block text-xs text-slate-400">{r.accountName}</span>}
                                                 </td>
                                                 <td className="p-4 font-bold text-orange-500">{r.gemsAmount} 💎</td>
-                                                <td className="p-4 font-bold text-green-600">Rp {r.rupiahAmount.toLocaleString()}</td>
+                                                <td className="p-4 font-bold text-green-600">Rp {Number(r.rupiahAmount || 0).toLocaleString()}</td>
                                                 <td className="p-4">
                                                     {r.status === "pending" && (
                                                         <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-bold border border-yellow-200">
