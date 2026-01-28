@@ -39,15 +39,9 @@ function mapRows(res: any) {
     return res.rows.map((row: any) => {
         const obj: any = {};
         row.forEach((cell: any, i: number) => {
-            // Map snake_case to camelCase manually if needed by frontend
-            // Frontend expects: id, title, type, placement, weight, frequency, scriptCode, imageUrl, targetUrl, isActive
             const col = cols[i];
-            if (col === 'script_code') obj.scriptCode = cell.value;
-            else if (col === 'image_url') obj.imageUrl = cell.value;
-            else if (col === 'target_url') obj.targetUrl = cell.value;
-            else if (col === 'is_active') obj.isActive = cell.value;
-            else if (col === 'updated_at') obj.updatedAt = cell.value;
-            else obj[col] = cell.value;
+            // RETURN RAW SNAKE_CASE to match Frontend Expectation
+            obj[col] = cell.value;
         });
         return obj;
     });

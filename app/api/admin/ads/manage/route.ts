@@ -35,7 +35,7 @@ async function tursoExecute(sql: string, args: any[] = []) {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { action, id, title, type, placement, weight, frequency, scriptCode, imageUrl, targetUrl, isActive } = body;
+        const { action, id, title, type, placement, weight, frequency, script_code, image_url, target_url, is_active } = body;
 
         console.log("[ADS MANAGE] Action:", action, "Body:", JSON.stringify(body));
 
@@ -59,10 +59,10 @@ export async function POST(req: Request) {
                 { type: "text", value: placement || "banner" },
                 { type: "integer", value: String(Number(weight) || 50) },
                 { type: "integer", value: String(Number(frequency) || 0) },
-                { type: "text", value: scriptCode || "" },
-                { type: "text", value: imageUrl || "" },
-                { type: "text", value: targetUrl || "" },
-                { type: "integer", value: isActive ? "1" : "0" },
+                { type: "text", value: script_code || "" },
+                { type: "text", value: image_url || "" },
+                { type: "text", value: target_url || "" },
+                { type: "integer", value: (is_active === true || is_active === 1 || is_active === "1") ? "1" : "0" },
                 { type: "text", value: nowISO },
                 { type: "integer", value: String(id) }
             ];
@@ -81,10 +81,10 @@ export async function POST(req: Request) {
                 { type: "text", value: placement || "banner" },
                 { type: "integer", value: String(Number(weight) || 50) },
                 { type: "integer", value: String(Number(frequency) || 0) },
-                { type: "text", value: scriptCode || "" },
-                { type: "text", value: imageUrl || "" },
-                { type: "text", value: targetUrl || "" },
-                { type: "integer", value: isActive ? "1" : "0" },
+                { type: "text", value: script_code || "" },
+                { type: "text", value: image_url || "" },
+                { type: "text", value: target_url || "" },
+                { type: "integer", value: (is_active === true || is_active === 1 || is_active === "1") ? "1" : "0" },
                 { type: "text", value: nowISO }
             ];
             await tursoExecute(sql, args);
