@@ -3,6 +3,7 @@
 import { useUserProgress } from "@/store/use-user-progress";
 import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
+import { ScriptRenderer } from "@/components/ads/script-renderer";
 
 export const AdSidebar = () => {
     const { hasActiveSubscription } = useUserProgress();
@@ -12,29 +13,15 @@ export const AdSidebar = () => {
     useEffect(() => {
         fetch("/api/ads")
             .then(res => res.json())
-            .then(data => setAd(data))
+            .then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                    setAd(data[0]); // Pick first active ad for now
+                }
+            })
             .catch(err => console.error("Failed to load ads", err));
     }, []);
 
-    // Execute script
-    useEffect(() => {
-        if (ad?.type === 'script' && ad?.script_code && scriptContainerRef.current) {
-            const container = scriptContainerRef.current;
-            container.innerHTML = ad.script_code;
 
-            const scripts = container.querySelectorAll("script");
-            scripts.forEach((oldScript) => {
-                const newScript = document.createElement("script");
-                Array.from(oldScript.attributes).forEach((attr) => {
-                    newScript.setAttribute(attr.name, attr.value);
-                });
-                newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-                if (oldScript.parentNode) {
-                    oldScript.parentNode.replaceChild(newScript, oldScript);
-                }
-            });
-        }
-    }, [ad]);
 
     // Hide if Super user
     if (hasActiveSubscription) {
@@ -69,21 +56,8 @@ export const AdSidebar = () => {
             <div className="text-gray-500 text-xs font-bold uppercase tracking-widest text-center mb-2">Partner Info</div>
 
             {ad.type === 'script' ? (
-                <div className="w-full min-h-[600px] bg-white/5 rounded-xl flex items-center justify-center overflow-hidden border border-white/10">
-                    <iframe
-                        srcDoc={`
-                            <html>
-                                <body style="margin:0;padding:0;display:flex;justify-content:center;align-items:center;">
-                                    ${ad.script_code}
-                                    <style>img { max-width: 100%; height: auto; }</style>
-                                </body>
-                            </html>
-                        `}
-                        className="w-full h-[600px] border-none overflow-hidden"
-                        // Allow scripts but restrict other dangerous actions
-                        sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
-                        title="Partner Content"
-                    />
+                <div className="w-full min-h-[600px] bg-white/5 rounded-xl flex items-center justify-center border border-white/10">
+                    <ScriptRenderer html={ad.script_code} />
                 </div>
             ) : (
                 <div className="flex flex-col gap-4">
