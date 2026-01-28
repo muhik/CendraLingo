@@ -202,14 +202,22 @@ export default function ManagerPage() {
     const handleDeleteAd = async (id: number) => {
         if (!confirm("Are you sure? This cannot be undone.")) return;
         try {
-            await fetch("/api/admin/ads", {
+            const res = await fetch("/api/admin/ads/manage", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ action: "delete", id })
             });
-            toast.success("Ad Deleted");
-            fetchAdSettings();
-        } catch (e) { toast.error("Error deleting"); }
+            const data = await res.json();
+
+            if (data.success) {
+                toast.success("Ad Deleted");
+                fetchAdSettings(); // Refresh list
+            } else {
+                toast.error(data.error || "Delete failed");
+            }
+        } catch (e) {
+            toast.error("Error deleting");
+        }
     }
 
     const openNewAdDialog = () => {
