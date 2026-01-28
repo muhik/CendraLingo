@@ -1409,6 +1409,7 @@ export default function ManagerPage() {
                                                 >
                                                     <option value="banner">Banner (Sticky)</option>
                                                     <option value="interstitial">Interstitial (Popup)</option>
+                                                    <option value="sidebar">Sidebar (Right)</option>
                                                 </select>
                                             </div>
                                         </div>

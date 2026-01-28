@@ -16,7 +16,9 @@ export const AdSidebar = () => {
             .then(data => {
                 console.log("[AdSidebar] Fetched data:", data);
                 if (Array.isArray(data) && data.length > 0) {
-                    setAd(data[0]); // Pick first active ad for now
+                    // Prioritize Sidebar Ad, fallback to any active ad
+                    const sidebarAd = data.find((a: any) => a.placement === 'sidebar') || data[0];
+                    setAd(sidebarAd);
                 } else {
                     console.log("[AdSidebar] No active ads found or invalid format");
                 }
