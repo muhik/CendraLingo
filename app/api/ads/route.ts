@@ -55,7 +55,7 @@ export async function GET() {
             // Ensure compatibility with frontend expectations
             return {
                 ...obj,
-                is_active: obj.is_active === 1,
+                is_active: obj.is_active == 1,
                 // Frontend might expect snake_case or camelCase depending on usage.
                 // AdManager uses: placement, weight, is_active. 
                 // The DB columns are snake_case but AdManager usage in `filter(a => a.placement === ...)` matches.

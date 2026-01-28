@@ -40,7 +40,7 @@ export const AdSidebar = () => {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
                     <div className="absolute inset-0 bg-[url('/cendra_mascot.png')] bg-cover opacity-20 bg-center" />
                     <div className="relative z-20 flex flex-col items-center gap-4">
-                        <h3 className="text-xl font-bold text-white text-shadow">Upgrade to PRO (Debug)</h3>
+                        <h3 className="text-xl font-bold text-white text-shadow">Upgrade to Super</h3>
                         <p className="text-gray-300 text-sm">Remove ads & support us!</p>
                         <Link href="/shop" className="w-full">
                             <button className="w-full py-3 rounded-xl bg-primary text-[#112217] font-bold shadow-lg hover:scale-105 transition-transform">
