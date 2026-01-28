@@ -11,7 +11,7 @@ export const AdSidebar = () => {
     const scriptContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        fetch("/api/ads")
+        fetch(`/api/ads?t=${Date.now()}`)
             .then(res => res.json())
             .then(data => {
                 if (Array.isArray(data) && data.length > 0) {

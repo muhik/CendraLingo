@@ -24,7 +24,7 @@ export const RightSidebar = () => {
 
     // Fetch Ad Settings
     useEffect(() => {
-        fetch("/api/ads")
+        fetch(`/api/ads?t=${Date.now()}`)
             .then(res => res.json())
             .then(data => {
                 // API now returns an array of active ads. We need to pick one for the sidebar.
