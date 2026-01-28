@@ -32,7 +32,7 @@ export default function Error({
                 Try again
             </Button>
             <Button
-                variant="link"
+                variant="ghost"
                 onClick={() => window.location.reload()}
             >
                 Hard Refresh

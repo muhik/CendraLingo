@@ -74,7 +74,11 @@ export const treasureSettings = sqliteTable("treasure_settings", {
 // Ad Settings
 export const adSettings = sqliteTable("ad_settings", {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    type: text("type").default('image'),
+    title: text("title").default("New Ad"),
+    type: text("type").default('image'), // image, script
+    placement: text("placement").default('banner'), // banner, interstitial
+    weight: integer("weight").default(50), // 0-100 chance
+    frequency: integer("frequency").default(0), // 0 = unlimited, >0 = max views per session
     scriptCode: text("script_code"),
     imageUrl: text("image_url"),
     targetUrl: text("target_url"),

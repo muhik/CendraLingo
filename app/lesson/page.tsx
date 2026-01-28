@@ -155,6 +155,12 @@ function LessonContent() {
                 addPoints(totalReward); // Award Gems
                 completeLesson(lessonId);
                 playCorrectSound();
+
+                // Trigger Ad (Sporadic System)
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new Event('lesson_complete'));
+                }
+
                 return;
             }
             setActiveIndex(prev => prev + 1);

@@ -1,16 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
-// FORCE DYNAMIC & NODEJS RUNTIME (CRITICAL FIX)
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Copy, Plus, RefreshCw, ShieldCheck, Users, Ticket, AlertTriangle, Search, Wallet, CheckCircle, XCircle, Settings, Megaphone, Bell, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 // Types
 interface Voucher {
@@ -58,7 +56,7 @@ interface Feedback {
     created_at: string;
 }
 
-export default function AdminPage() {
+export default function ManagerPage() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [password, setPassword] = useState("");
     const [activeTab, setActiveTab] = useState<"users" | "vouchers" | "redeem" | "treasure" | "feedback" | "ads" | "security" | "transactions">("vouchers");
@@ -106,13 +104,9 @@ export default function AdminPage() {
     const [savingTreasure, setSavingTreasure] = useState(false);
 
     // Ads Settings State
-    const [adSettings, setAdSettings] = useState({
-        type: 'image',
-        script_code: '',
-        image_url: '',
-        target_url: '',
-        is_active: false
-    });
+    const [adsList, setAdsList] = useState<any[]>([]);
+    const [editingAd, setEditingAd] = useState<any>(null); // For Dialog
+    const [isAdDialogOpen, setIsAdDialogOpen] = useState(false);
     const [savingAds, setSavingAds] = useState(false);
 
     // Security Logs State
@@ -129,37 +123,29 @@ export default function AdminPage() {
         fetch(`/api/admin/transactions?page=${transPage}`)
             .then(res => res.json())
             .then(data => {
-                setTransactions(Array.isArray(data.data) ? data.data : []);
+                setTransactions(data.data || []);
                 setTransTotalPages(data.pagination?.totalPages || 1);
             })
-            .catch(err => {
-                console.error("Fetch transactions error:", err);
-                setTransactions([]);
-            });
+            .catch(console.error);
     };
 
     const fetchSecurityLogs = () => {
         fetch(`/api/admin/security/logs?page=${securityPage}`)
             .then(res => res.json())
             .then(data => {
-                setSecurityLogs(Array.isArray(data.data) ? data.data : []);
+                setSecurityLogs(data.data || []);
                 setSecurityTotalPages(data.pagination?.totalPages || 1);
             })
             .catch(console.error);
     };
 
     const fetchAdSettings = () => {
-        fetch("/api/admin/ads")
+        // Add timestamp to prevent Cloudflare caching
+        fetch(`/api/admin/ads?t=${Date.now()}`)
             .then(res => res.json())
             .then(data => {
-                if (data && data.id) {
-                    setAdSettings({
-                        type: data.type || 'image',
-                        script_code: data.script_code || '',
-                        image_url: data.image_url || '',
-                        target_url: data.target_url || '',
-                        is_active: data.is_active === 1
-                    });
+                if (Array.isArray(data)) {
+                    setAdsList(data);
                 }
             })
             .catch(console.error);
@@ -187,37 +173,65 @@ export default function AdminPage() {
         }
     };
 
-    const saveAdSettings = () => {
+    const handleSaveAd = async (e: React.FormEvent) => {
+        e.preventDefault();
         setSavingAds(true);
-        fetch("/api/admin/ads", {
-            method: "POST",
-            body: JSON.stringify(adSettings)
-        })
-            .then(res => res.json())
-            .then(() => {
-                setSavingAds(false);
-                alert("Pengaturan Iklan Disimpan!");
-            })
-            .catch(() => setSavingAds(false));
+        const action = editingAd.id ? "update" : "create";
+
+        try {
+            const res = await fetch("/api/admin/ads/manage", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action, ...editingAd })
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success(`Ad ${action}d successfully`);
+                setIsAdDialogOpen(false);
+                fetchAdSettings();
+            } else {
+                toast.error(data.error || "Failed");
+            }
+        } catch (error) {
+            toast.error("Connection Error");
+        } finally {
+            setSavingAds(false);
+        }
+    }
+
+    const handleDeleteAd = async (id: number) => {
+        if (!confirm("Are you sure? This cannot be undone.")) return;
+        try {
+            await fetch("/api/admin/ads", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "delete", id })
+            });
+            toast.success("Ad Deleted");
+            fetchAdSettings();
+        } catch (e) { toast.error("Error deleting"); }
+    }
+
+    const openNewAdDialog = () => {
+        setEditingAd({
+            title: "New Promotion",
+            type: "image",
+            placement: "banner",
+            weight: 50,
+            frequency: 0,
+            image_url: "",
+            target_url: "",
+            script_code: "",
+            is_active: true
+        });
+        setIsAdDialogOpen(true);
     }
 
     const fetchUsers = () => {
         fetch("/api/admin/users")
             .then(res => res.json())
-            .then(data => {
-                // SAFETY CHECK: Ensure data is an array before setting state
-                // This prevents .filter() crashes if API returns { error: ... }
-                if (Array.isArray(data)) {
-                    setUsers(data);
-                } else {
-                    console.error("Users API returned non-array:", data);
-                    setUsers([]);
-                }
-            })
-            .catch(err => {
-                console.error("Fetch users error:", err);
-                setUsers([]);
-            });
+            .then(setUsers)
+            .catch(console.error);
     };
 
     const fetchVouchers = () => {
@@ -231,7 +245,7 @@ export default function AdminPage() {
         fetch(`/api/admin/vouchers?${params.toString()}`)
             .then(res => res.json())
             .then(res => {
-                setAdminVouchers(Array.isArray(res?.data) ? res.data : []);
+                setAdminVouchers(res?.data || []);
                 setTotalPages(res?.pagination?.totalPages || 1);
             })
             .catch(err => {
@@ -252,7 +266,7 @@ export default function AdminPage() {
         fetch(`/api/admin/claims?${params.toString()}`)
             .then(res => res.json())
             .then(res => {
-                setAlerts(Array.isArray(res?.data) ? res.data : []);
+                setAlerts(res?.data || []);
                 setClaimsTotalPages(res?.pagination?.totalPages || 1);
                 setTotalCashback(res?.summary?.totalCashback || 0);
             })
@@ -273,7 +287,7 @@ export default function AdminPage() {
         fetch(`/api/admin/feedback?${params.toString()}`)
             .then(res => res.json())
             .then(res => {
-                setFeedbacks(Array.isArray(res?.data) ? res.data : []);
+                setFeedbacks(res?.data || []);
                 setFeedbackTotalPages(res?.pagination?.totalPages || 1);
             })
             .catch(console.error);
@@ -283,7 +297,7 @@ export default function AdminPage() {
         fetch("/api/admin/redeem")
             .then(res => res.json())
             .then(res => {
-                setRedeemRequests(Array.isArray(res?.requests) ? res.requests : []);
+                setRedeemRequests(res?.requests || []);
                 setPendingRedeemCount(res?.pendingCount || 0);
             })
             .catch(err => {
@@ -324,8 +338,8 @@ export default function AdminPage() {
 
     useEffect(() => {
         if (isAuthenticated) {
-            // Fetch Users - MOVED to safe function
-            fetchUsers();
+            // Fetch Users
+            fetch("/api/admin/users").then(res => res.json()).then(setUsers);
             // Fetch Claims (with pagination)
             fetchClaims();
         }
@@ -464,7 +478,7 @@ export default function AdminPage() {
                 <div className="flex items-center gap-4">
                     <div>
                         <h1 className="text-3xl font-bold text-slate-800">🛠️ Cendra Admin CMS</h1>
-                        <p className="text-slate-500">Pusat Kontrol & Cetak Uang (Authorized: Node.js/Dynamic)</p>
+                        <p className="text-slate-500">Pusat Kontrol & Cetak Uang (Manager V2)</p>
                     </div>
                     {/* Course Completion Alert Bell */}
                     {users.filter(u => u.isCourseCompleted).length > 0 && (
@@ -751,7 +765,7 @@ export default function AdminPage() {
                                                             <td className={`p-4 font-mono font-bold ${v.isClaimed ? "line-through text-slate-400" : "text-sky-700"}`}>
                                                                 {v.code}
                                                             </td>
-                                                            <td className="p-4">Rp {Number(v.valueRp || 0).toLocaleString()}</td>
+                                                            <td className="p-4">Rp {v.valueRp.toLocaleString()}</td>
                                                             <td className="p-4">
                                                                 {v.isClaimed ? (
                                                                     <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-bold border border-red-200">
@@ -820,7 +834,7 @@ export default function AdminPage() {
                                     {/* Total Cashback Summary */}
                                     <div className="bg-green-50 border border-green-200 rounded-lg p-2 mb-3 flex justify-between items-center">
                                         <span className="text-xs text-green-700">Total Bayar Periode Ini:</span>
-                                        <span className="font-bold text-green-800">Rp {Number(totalCashback || 0).toLocaleString()}</span>
+                                        <span className="font-bold text-green-800">Rp {totalCashback.toLocaleString()}</span>
                                     </div>
 
                                     <div className="space-y-2 max-h-[300px] overflow-y-auto">
@@ -846,12 +860,12 @@ export default function AdminPage() {
                                                             </span>
                                                             <div className="text-right">
                                                                 <span className="text-xs font-mono bg-green-100 text-green-700 px-1 rounded font-bold">
-                                                                    Bayar: Rp {Number(alert.cashbackAmount || 0).toLocaleString()}
+                                                                    Bayar: Rp {alert.cashbackAmount?.toLocaleString() || 0}
                                                                 </span>
                                                             </div>
                                                         </div>
                                                         <span className="text-xs text-slate-500 mt-1">
-                                                            Voucher {Number(alert.valueRp || 0).toLocaleString()} • Kode: <span className="font-mono text-slate-700 font-bold">{alert.code}</span>
+                                                            Voucher {alert.valueRp?.toLocaleString()} • Kode: <span className="font-mono text-slate-700 font-bold">{alert.code}</span>
                                                             {alert.claimedAt && (
                                                                 <span className="ml-2 text-slate-400">
                                                                     • {new Date(alert.claimedAt).toLocaleDateString("id-ID")}
@@ -943,7 +957,7 @@ export default function AdminPage() {
                                 {(users || []).map((u) => (
                                     <tr key={u.userId} className="border-b hover:bg-slate-50">
                                         <td className="p-4 font-mono text-xs text-slate-500">
-                                            {(u.userId || "Unknown").substring(0, 8)}...
+                                            {u.userId.substring(0, 8)}...
                                             <span className="block text-xs font-bold text-slate-700">{u.userName}</span>
                                         </td>
                                         <td className="p-4">
@@ -1049,7 +1063,7 @@ export default function AdminPage() {
                                                 </td>
                                                 <td className="p-4">
                                                     <span className="font-bold text-slate-700">{r.userName}</span>
-                                                    <span className="block text-xs text-slate-400 font-mono">{(r.userId || "").substring(0, 8)}...</span>
+                                                    <span className="block text-xs text-slate-400 font-mono">{r.userId.substring(0, 8)}...</span>
                                                 </td>
                                                 <td className="p-4">
                                                     <span className="uppercase font-bold text-slate-600">{r.paymentMethod}</span>
@@ -1059,7 +1073,7 @@ export default function AdminPage() {
                                                     {r.accountName && <span className="block text-xs text-slate-400">{r.accountName}</span>}
                                                 </td>
                                                 <td className="p-4 font-bold text-orange-500">{r.gemsAmount} 💎</td>
-                                                <td className="p-4 font-bold text-green-600">Rp {Number(r.rupiahAmount || 0).toLocaleString()}</td>
+                                                <td className="p-4 font-bold text-green-600">Rp {r.rupiahAmount.toLocaleString()}</td>
                                                 <td className="p-4">
                                                     {r.status === "pending" && (
                                                         <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-bold border border-yellow-200">
@@ -1251,7 +1265,7 @@ export default function AdminPage() {
                                                 </td>
                                                 <td className="p-4">
                                                     <div className="font-bold text-slate-700">{f.user_name}</div>
-                                                    <div className="text-xs text-slate-400 font-mono">{(f.user_id || "").substring(0, 8)}...</div>
+                                                    <div className="text-xs text-slate-400 font-mono">{f.user_id.substring(0, 8)}...</div>
                                                 </td>
                                                 <td className="p-4">
                                                     {f.type === 'saran' && <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">SARAN</span>}
@@ -1310,89 +1324,172 @@ export default function AdminPage() {
             {/* --- TAB: ADS MANAGER --- */}
             {
                 activeTab === "ads" && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                            <h3 className="font-bold text-lg flex items-center text-slate-800">
-                                <Megaphone className="mr-2 h-5 w-5 text-emerald-600" />
-                                Kelola Sidebar Ads
-                            </h3>
-                            <div className="flex items-center gap-2">
-                                <span className={`text-xs font-bold px-2 py-1 rounded ${adSettings.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                    {adSettings.is_active ? 'AKTIF' : 'NONAKTIF'}
-                                </span>
-                            </div>
-                        </div>
-                        <div className="p-6 space-y-6">
-                            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                                <span className="font-semibold text-sm">Status Iklan:</span>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" className="sr-only peer" checked={adSettings.is_active} onChange={(e) => setAdSettings({ ...adSettings, is_active: e.target.checked })} />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                                </label>
-                            </div>
-
-                            <div className="space-y-4">
-                                <label className="block text-sm font-semibold text-slate-700">Tipe Iklan</label>
-                                <div className="flex gap-4">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input type="radio" name="adType" checked={adSettings.type === 'image'} onChange={() => setAdSettings({ ...adSettings, type: 'image' })} />
-                                        <span className="text-sm">Gambar Banner (Manual)</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input type="radio" name="adType" checked={adSettings.type === 'script'} onChange={() => setAdSettings({ ...adSettings, type: 'script' })} />
-                                        <span className="text-sm">Script Code (AdSense/Lainnya)</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            {adSettings.type === 'image' ? (
-                                <div className="space-y-4 border-t pt-4">
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">URL Gambar (Image Link)</label>
-                                        <Input
-                                            placeholder="https://example.com/banner.jpg"
-                                            value={adSettings.image_url}
-                                            onChange={(e) => setAdSettings({ ...adSettings, image_url: e.target.value })}
-                                        />
-                                        <p className="text-xs text-slate-500 mt-1">Upload gambar ke hosting/CDN lalu paste link-nya di sini.</p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Target URL (Link Tujuan)</label>
-                                        <Input
-                                            placeholder="https://shopee.co.id/..."
-                                            value={adSettings.target_url}
-                                            onChange={(e) => setAdSettings({ ...adSettings, target_url: e.target.value })}
-                                        />
-                                    </div>
-                                    {adSettings.image_url && (
-                                        <div className="mt-4">
-                                            <p className="text-xs font-bold mb-2">Preview Banner:</p>
-                                            <img src={adSettings.image_url} alt="Preview" className="max-w-xs rounded-lg border shadow-sm" />
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="space-y-4 border-t pt-4">
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Script Code (HTML/JS)</label>
-                                        <textarea
-                                            className="w-full h-40 p-3 rounded-md border border-input text-sm font-mono bg-slate-900 text-green-400"
-                                            placeholder="<script>...</script>"
-                                            value={adSettings.script_code}
-                                            onChange={(e) => setAdSettings({ ...adSettings, script_code: e.target.value })}
-                                        />
-                                        <p className="text-xs text-orange-600 mt-1">⚠️ Hati-hati memasukkan script. Script yang salah bisa merusak tampilan website.</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="pt-6 border-t flex justify-end">
-                                <Button onClick={saveAdSettings} disabled={savingAds} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                                    {savingAds ? <RefreshCw className="animate-spin mr-2 h-4 w-4" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                                    Simpan Pengaturan Iklan
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="p-4 bg-emerald-50 border-b border-emerald-200 flex justify-between items-center">
+                                <h3 className="font-bold text-lg flex items-center text-emerald-800">
+                                    <Megaphone className="mr-2 h-5 w-5" />
+                                    Sporadic Ads Manager
+                                </h3>
+                                <Button onClick={openNewAdDialog} className="bg-emerald-600 hover:bg-emerald-700">
+                                    <Plus className="h-4 w-4 mr-1" /> Buat Iklan Baru
                                 </Button>
                             </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-slate-50 border-b">
+                                        <tr>
+                                            <th className="p-4">TITLE</th>
+                                            <th className="p-4">TYPE</th>
+                                            <th className="p-4">PLACEMENT</th>
+                                            <th className="p-4">CHANCE (WEIGHT)</th>
+                                            <th className="p-4">STATUS</th>
+                                            <th className="p-4">ACTIONS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {adsList.length === 0 ? (
+                                            <tr><td colSpan={6} className="p-8 text-center text-slate-400">Belum ada iklan.</td></tr>
+                                        ) : (
+                                            adsList.map((ad) => (
+                                                <tr key={ad.id} className="border-b hover:bg-slate-50">
+                                                    <td className="p-4 font-bold text-slate-700">{ad.title}</td>
+                                                    <td className="p-4 uppercase text-xs font-mono">{ad.type}</td>
+                                                    <td className="p-4">
+                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${ad.placement === 'interstitial' ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'}`}>
+                                                            {ad.placement.toUpperCase()}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4 font-mono">{ad.weight}</td>
+                                                    <td className="p-4">
+                                                        {ad.is_active ?
+                                                            <span className="text-green-600 font-bold text-xs">ACTIVE</span> :
+                                                            <span className="text-slate-400 font-bold text-xs">INACTIVE</span>
+                                                        }
+                                                    </td>
+                                                    <td className="p-4 flex gap-2">
+                                                        <Button size="sm" variant="outline" onClick={() => { setEditingAd(ad); setIsAdDialogOpen(true); }}>
+                                                            Edit
+                                                        </Button>
+                                                        <Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50" onClick={() => handleDeleteAd(ad.id)}>
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
+
+                        {/* EDIT DIALOG */}
+                        <Dialog open={isAdDialogOpen} onOpenChange={setIsAdDialogOpen}>
+                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                                <DialogHeader>
+                                    <DialogTitle>{editingAd?.id ? "Edit Ad" : "Create New Ad"}</DialogTitle>
+                                </DialogHeader>
+                                {editingAd && (
+                                    <form onSubmit={handleSaveAd} className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-bold">Judul Iklan</label>
+                                                <Input
+                                                    value={editingAd.title}
+                                                    onChange={(e) => setEditingAd({ ...editingAd, title: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-bold">Placement</label>
+                                                <select
+                                                    className="w-full p-2 border rounded-md"
+                                                    value={editingAd.placement}
+                                                    onChange={(e) => setEditingAd({ ...editingAd, placement: e.target.value })}
+                                                >
+                                                    <option value="banner">Banner (Sticky)</option>
+                                                    <option value="interstitial">Interstitial (Popup)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-bold">Type</label>
+                                                <select
+                                                    className="w-full p-2 border rounded-md"
+                                                    value={editingAd.type}
+                                                    onChange={(e) => setEditingAd({ ...editingAd, type: e.target.value })}
+                                                >
+                                                    <option value="image">Image Link</option>
+                                                    <option value="script">Custom Script</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-bold">Weight (Chance)</label>
+                                                <Input
+                                                    type="number"
+                                                    value={editingAd.weight}
+                                                    onChange={(e) => setEditingAd({ ...editingAd, weight: Number(e.target.value) })}
+                                                />
+                                                <p className="text-[10px] text-slate-500">Higher = More often</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-bold">Status</label>
+                                                <div className="flex items-center h-10">
+                                                    <label className="flex items-center gap-2 cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!editingAd.is_active}
+                                                            onChange={(e) => setEditingAd({ ...editingAd, is_active: e.target.checked })}
+                                                            className="w-4 h-4 accent-emerald-600"
+                                                        />
+                                                        <span className="text-sm">Active</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {editingAd.type === 'image' ? (
+                                            <div className="space-y-4 border-t pt-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-bold">Image URL</label>
+                                                    <Input
+                                                        value={editingAd.image_url}
+                                                        onChange={(e) => setEditingAd({ ...editingAd, image_url: e.target.value })}
+                                                        placeholder="https://..."
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-bold">Target URL (Click Destination)</label>
+                                                    <Input
+                                                        value={editingAd.target_url}
+                                                        onChange={(e) => setEditingAd({ ...editingAd, target_url: e.target.value })}
+                                                        placeholder="https://..."
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2 border-t pt-4">
+                                                <label className="text-sm font-bold">Script Code</label>
+                                                <textarea
+                                                    className="w-full h-32 p-2 border rounded-md font-mono text-xs bg-slate-900 text-green-400"
+                                                    value={editingAd.script_code}
+                                                    onChange={(e) => setEditingAd({ ...editingAd, script_code: e.target.value })}
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-end gap-2 pt-4">
+                                            <Button type="button" variant="ghost" onClick={() => setIsAdDialogOpen(false)}>Cancel</Button>
+                                            <Button type="submit" disabled={savingAds} className="bg-emerald-600 hover:bg-emerald-700">
+                                                {savingAds ? "Saving..." : "Save Ad"}
+                                            </Button>
+                                        </div>
+                                    </form>
+                                )}
+                            </DialogContent>
+                        </Dialog>
                     </div>
                 )
             }
@@ -1439,7 +1536,7 @@ export default function AdminPage() {
                                                 <td className="p-4 font-bold text-slate-700">{log.event_type}</td>
                                                 <td className="p-4">
                                                     <div className="font-bold text-slate-700">{log.user_name}</div>
-                                                    <div className="text-xs text-slate-400 font-mono">{(log.user_id || "").substring(0, 8)}...</div>
+                                                    <div className="text-xs text-slate-400 font-mono">{log.user_id.substring(0, 8)}...</div>
                                                 </td>
                                                 <td className="p-4 text-slate-600 max-w-md">{log.description}</td>
                                             </tr>
@@ -1458,8 +1555,7 @@ export default function AdminPage() {
                     </div>
                 )
             }
-        </div >
-
+        </div>
     );
 }
 

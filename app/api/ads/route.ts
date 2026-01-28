@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 // Raw Turso Executor to bypass Cloudflare/OpenNext driver bundling issues
 async function tursoExecute(sql: string, args: any[] = []) {
     const dbUrl = process.env.TURSO_CONNECTION_URL!;
     const dbToken = process.env.TURSO_AUTH_TOKEN!;
 
-    // Ensure URL format
     const finalUrl = dbUrl.startsWith("libsql://") ? dbUrl.replace("libsql://", "https://") : dbUrl;
 
     const response = await fetch(`${finalUrl}/v2/pipeline`, {
@@ -34,35 +34,38 @@ async function tursoExecute(sql: string, args: any[] = []) {
 
 export async function GET() {
     try {
-        // Fetch active ad settings
-        const res = await tursoExecute("SELECT * FROM ad_settings WHERE is_active = 1 LIMIT 1");
+        // Fetch all active ads
+        const res = await tursoExecute("SELECT * FROM ad_settings WHERE is_active = 1 ORDER BY updated_at DESC");
 
         if (!res?.rows?.length) {
-            return NextResponse.json({ is_active: false });
+            return NextResponse.json([]);
         }
 
-        // Map columns to object (Turso returns cols/rows separate)
-        const cols = res.cols.map((c: any) => c.name.toLowerCase());
-
-        const row = res.rows[0]; // standard rows array
-        const data: any = {};
-        row.forEach((cell: any, i: number) => {
-            data[cols[i]] = cell.value;
+        const cols = res.cols.map((c: any) => c.name);
+        const ads = res.rows.map((row: any) => {
+            const obj: any = {};
+            row.forEach((cell: any, i: number) => {
+                const col = cols[i];
+                if (col === 'script_code') obj.script_code = cell.value;
+                else if (col === 'image_url') obj.image_url = cell.value;
+                else if (col === 'target_url') obj.target_url = cell.value;
+                else if (col === 'is_active') obj.is_active = cell.value;
+                else obj[col] = cell.value;
+            });
+            // Ensure compatibility with frontend expectations
+            return {
+                ...obj,
+                is_active: obj.is_active === 1,
+                // Frontend might expect snake_case or camelCase depending on usage.
+                // AdManager uses: placement, weight, is_active. 
+                // The DB columns are snake_case but AdManager usage in `filter(a => a.placement === ...)` matches.
+            };
         });
 
-        // Use snake_case keys (drizzle schema default) or try mapping to what we need
-        const result = {
-            is_active: (data["is_active"] == 1) || (data["isactive"] == 1),
-            type: data["type"] || "image",
-            image_url: data["image_url"] || data["imageurl"] || "",
-            target_url: data["target_url"] || data["targeturl"] || "",
-            script_code: data["script_code"] || data["scriptcode"] || "",
-        };
-
-        return NextResponse.json(result);
+        return NextResponse.json(ads);
 
     } catch (error) {
         console.error("[ADS API] Error:", error);
-        return NextResponse.json({ is_active: false }, { status: 500 });
+        return NextResponse.json([], { status: 500 });
     }
 }

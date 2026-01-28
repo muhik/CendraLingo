@@ -10,11 +10,48 @@ import { Security, SecurityEvent, SecuritySeverity } from "@/lib/security";
 // --------------------------------------------------------------------------------
 async function getAds() {
     try {
-        const rows = await tursoQuery("SELECT * FROM ad_settings WHERE id = 1 AND is_active = 1 LIMIT 1");
-        const ad = rows[0] || null;
-        return NextResponse.json(ad);
+        const rows = await tursoQuery("SELECT * FROM ad_settings WHERE is_active = 1");
+        return NextResponse.json(rows); // Now returns Array
     } catch (e) {
         return NextResponse.json({ error: String(e) }, { status: 500 });
+    }
+}
+
+async function postAdsManage(req: Request) {
+    try {
+        const body = await req.json();
+        const { action, id, title, type, placement, weight, frequency,
+            scriptCode, script_code,
+            imageUrl, image_url,
+            targetUrl, target_url,
+            isActive, is_active
+        } = body;
+
+        const finalScript = scriptCode || script_code;
+        const finalImage = imageUrl || image_url;
+        const finalTarget = targetUrl || target_url;
+        // Handle boolean or 0/1
+        const finalActive = (isActive === true || isActive === 1 || isActive === '1' || is_active === true || is_active === 1 || is_active === '1') ? 1 : 0;
+
+        if (action === "create") {
+            await tursoExecute(
+                "INSERT INTO ad_settings (title, type, placement, weight, frequency, script_code, image_url, target_url, is_active, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [title || "New Ad", type || 'image', placement || 'banner', weight || 50, frequency || 0, finalScript, finalImage, finalTarget, finalActive, new Date().toISOString()]
+            );
+            return NextResponse.json({ success: true, message: "Ad Created" });
+        } else if (action === "update") {
+            await tursoExecute(
+                "UPDATE ad_settings SET title=?, type=?, placement=?, weight=?, frequency=?, script_code=?, image_url=?, target_url=?, is_active=?, updated_at=? WHERE id=?",
+                [title, type, placement, weight, frequency, finalScript, finalImage, finalTarget, finalActive, new Date().toISOString(), id]
+            );
+            return NextResponse.json({ success: true, message: "Ad Updated" });
+        } else if (action === "delete") {
+            await tursoExecute("DELETE FROM ad_settings WHERE id=?", [id]);
+            return NextResponse.json({ success: true, message: "Ad Deleted" });
+        }
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    } catch (e) {
+        return NextResponse.json({ success: false, error: String(e) }, { status: 500 });
     }
 }
 
@@ -293,7 +330,7 @@ async function getUserSync(req: Request) {
             cashbackBalance: user.cashback_balance || 0,
             userName: user.user_name,
             lastSpinDate: user.last_spin_date,
-            // Add other fields if necessary
+            isCourseCompleted: Boolean(user.is_course_completed),
         };
 
         return NextResponse.json({ success: true, user: mappedUser });
@@ -303,7 +340,7 @@ async function getUserSync(req: Request) {
 async function postUserSync(req: Request) {
     try {
         const body = await req.json();
-        const { userId, hearts, points, isGuest, hasActiveSubscription, cashbackBalance } = body;
+        const { userId, hearts, points, isGuest, hasActiveSubscription, cashbackBalance, isCourseCompleted } = body;
         if (!userId) return NextResponse.json({ success: false }, { status: 400 });
 
         const existing = await tursoQuery("SELECT * FROM user_progress WHERE user_id = ?", [userId]);
@@ -329,15 +366,15 @@ async function postUserSync(req: Request) {
                 await Security.log(userId, existing[0].user_name, SecurityEvent.GEMS_MANIPULATION, `User tried to set cashback via sync: ${oldCashback} -> ${newCashback}`, SecuritySeverity.HIGH);
                 // Do not update cashback
                 await tursoExecute(
-                    "UPDATE user_progress SET hearts = ?, points = ?, is_guest = ?, has_active_subscription = ? WHERE user_id = ?",
-                    [hearts, points, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, userId]
+                    "UPDATE user_progress SET hearts = ?, points = ?, is_guest = ?, has_active_subscription = ?, is_course_completed = ? WHERE user_id = ?",
+                    [hearts, points, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, isCourseCompleted ? 1 : 0, userId]
                 );
                 return NextResponse.json({ success: true }); // Partial success (ignored cashback)
             }
 
             await tursoExecute(
-                "UPDATE user_progress SET hearts = ?, points = ?, is_guest = ?, has_active_subscription = ?, cashback_balance = ? WHERE user_id = ?",
-                [hearts, points, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, newCashback, userId]
+                "UPDATE user_progress SET hearts = ?, points = ?, is_guest = ?, has_active_subscription = ?, cashback_balance = ?, is_course_completed = ? WHERE user_id = ?",
+                [hearts, points, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, newCashback, isCourseCompleted ? 1 : 0, userId]
             );
         } else {
             // New user Sync
@@ -495,6 +532,8 @@ export async function POST(req: Request, context: { params: Promise<{ slug: stri
     const slug = (await context.params).slug;
     const path = slug.join("/");
     switch (path) {
+        case "ads": return getAds(); // Also support ads (get) for cleaner URL
+        case "ads/manage": return postAdsManage(req);
         case "feedback": return postFeedback(req);
         case "purchase": return postPurchase(req);
         case "redeem/request": return postRedeemRequest(req);
