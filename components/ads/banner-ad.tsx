@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { ScriptRenderer } from "./script-renderer";
 
 interface BannerAdProps {
     ad: any;
@@ -28,7 +29,7 @@ export const BannerAd = ({ ad, onClose }: BannerAdProps) => {
                 {/* Content */}
                 <div className="flex-1 flex justify-center">
                     {ad.type === 'script' ? (
-                        <div dangerouslySetInnerHTML={{ __html: ad.script_code }} />
+                        <ScriptRenderer html={ad.script_code} />
                     ) : (
                         <a href={ad.target_url} target="_blank" rel="noopener noreferrer" className="block max-w-full">
                             <img

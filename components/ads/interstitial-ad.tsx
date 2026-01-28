@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScriptRenderer } from "./script-renderer";
 
 interface InterstitialAdProps {
     ad: any;
@@ -50,10 +51,9 @@ export const InterstitialAd = ({ ad, onClose }: InterstitialAdProps) => {
                 {/* Content */}
                 <div className="p-0">
                     {ad.type === 'script' ? (
-                        <div
-                            className="flex justify-center items-center min-h-[300px] bg-gray-100"
-                            dangerouslySetInnerHTML={{ __html: ad.script_code }}
-                        />
+                        <div className="flex justify-center items-center min-h-[300px] bg-gray-100">
+                            <ScriptRenderer html={ad.script_code} />
+                        </div>
                     ) : (
                         <a href={ad.target_url || "#"} target="_blank" rel="noopener noreferrer" className="block relative group">
                             {/* Native Image */}
