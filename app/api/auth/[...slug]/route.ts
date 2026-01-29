@@ -115,6 +115,58 @@ async function handleRegister(req: Request) {
         const { name, email, password, guestId, guestPoints, guestHearts } = body;
         if (!name || !email || !password) return NextResponse.json({ message: "Missing fields" }, { status: 400 });
 
+        // BLOCKED DOMAINS (Disposable/Temp Email Providers)
+        // Expanded List to prevent "Nuyul" (Account Farming)
+        const DISPOSABLE_DOMAINS = [
+            // Major Providers
+            "temp-mail.org", "10minutemail.com", "guerrillamail.com", "yopmail.com", "mailinator.com",
+            "throwawaymail.com", "maildrop.cc", "getnada.com", "dispostable.com", "sharklasers.com",
+            "tempmail.com", "mm.st", "moakt.com", "trashmail.com", "jetable.org",
+
+            // Yopmail Variants
+            "yopmail.fr", "yopmail.net", "cool.fr.nf", "jetable.fr.nf", "nospam.ze.tc", "nomail.xl.cx",
+            "mega.zik.dj", "speed.1s.fr", "courriel.fr.nf", "moncourrier.fr.nf", "monemail.fr.nf", "monmail.fr.nf",
+
+            // Guerrilla Mail Variants
+            "guerrillamailblock.com", "guerrillamail.net", "guerrillamail.biz", "guerrillamail.org",
+            "grr.la", "pokemail.net", "spam4.me",
+
+            // Mailinator Variants
+            "superrito.com", "teleworm.us", "jourrapide.com", "veryrealemail.com", "zippymail.info",
+            "chammy.info", "trbvm.com", "larmon.com", "ce.ms", "gawab.com",
+
+            // 10MinuteMail & Others
+            "10minutemail.net", "10minutemail.co.uk", "10minutemail.ca", "10mail.org",
+            "20minutemail.com", "30minutemail.com", "33mail.com", "4email.net",
+
+            // TrashMail
+            "trashmail.net", "trashmail.me", "trashmail.at", "rcpt.at", "kurzepost.de", "wegwerfmail.de",
+            "trashmail.io", "trashmail.org", "trash-mail.com",
+
+            // Other Common Disposable Domains
+            "0-mail.com", "0815.ru", "0clickemail.com", "0wnd.net", "0wnd.org",
+            "5ymail.com", "9ox.net", "a-bc.net", "anonbox.net", "antichef.com", "antichef.net",
+            "baxomail.com", "beefmilk.com", "bigstring.com", "binkmail.com", "bio-mimicry.org",
+            "bitebull.com", "bodhi.law", "bofthew.com", "boun.cr", "bouncr.com", "boximail.com",
+            "bugmenot.com", "bwn2.org", "cachedot.net", "cashflow35.com", "card2brain.org",
+            "chogmail.com", "choi.one", "chtrash.com", "ciphermail.com", "citizencorp.com",
+            "clrmail.com", "contact-novus.com", "cortef.com", "covbase.com", "dandikmail.com",
+            "deadaddress.com", "despam.it", "despam.us", "devnullmail.com", "dfgh.net",
+            "digitalsafe.com", "discard.email", "discardmail.com", "discardmail.de",
+            "dodgit.com", "drdrb.com", "e4ward.com", "email-temp.com", "email60.com",
+            "emailconf.com", "emailfreedom.com", "emailim.com", "emaill.net",
+            "emailn.de", "emailnya.com", "emailproxsy.com", "emailtemporaneo.it",
+            "eml.cc", "emlhub.com", "emltmp.com", "etemp.com", "eternity-mail.com",
+            "fast-email.com", "fastmail.ca", "fastmail.cn", "fastmail.co.uk", "fastmail.com",
+            "tempmailo.com", "tempr.email", "mailpoof.com", "mailsac.com", "mailnesia.com",
+            "mintemail.com", "mytrashmail.com", "spambox.us", "spamgourmet.com"
+        ];
+
+        const emailDomain = email.split('@')[1]?.toLowerCase();
+        if (emailDomain && DISPOSABLE_DOMAINS.includes(emailDomain)) {
+            return NextResponse.json({ message: "Penggunaan Temporary Email/Akun Palsu tidak diizinkan. Mohon gunakan email pribadi yang valid (Gmail, Yahoo, iCloud, dll)." }, { status: 400 });
+        }
+
         const existingUsers = await tursoQuery("SELECT * FROM users WHERE email = ?", [email]);
         if (existingUsers.length > 0) return NextResponse.json({ message: "Email already registered" }, { status: 409 });
 
