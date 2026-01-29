@@ -24,6 +24,7 @@ export const ManualPaymentModal = ({
 }: ManualPaymentModalProps) => {
     const [timeLeft, setTimeLeft] = useState(120); // 2 Minutes
     const [canConfirm, setCanConfirm] = useState(false);
+    const [selectedMethod, setSelectedMethod] = useState<"BCA" | "DANA">("BCA");
 
     // Timer Logic
     useEffect(() => {
@@ -82,39 +83,88 @@ export const ManualPaymentModal = ({
                 </DialogHeader>
 
                 <div className="space-y-6 py-2">
-                    {/* BCA Section */}
-                    <div className="bg-slate-100 p-4 rounded-xl border-2 border-slate-200">
-                        <div className="flex items-center gap-2 mb-2">
-                            <Image src="/bca.png" alt="BCA" width={40} height={15} className="object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
-                            {/* Fallback text if image missing */}
-                            <span className="font-bold text-slate-700">Bank BCA</span>
-                        </div>
-                        <div className="flex justify-between items-center bg-white p-2 rounded-lg border border-slate-200">
-                            <div className="flex flex-col">
-                                <span className="font-mono font-bold text-lg text-slate-800">501 517 1330</span>
-                                <span className="text-xs text-slate-500 uppercase">Muhamad Ikbal</span>
+                    {/* Payment Method Tabs */}
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* BCA Button - Blue Gradient */}
+                        <button
+                            onClick={() => setSelectedMethod("BCA")}
+                            className={`relative overflow-hidden rounded-xl p-4 h-24 flex flex-col items-start justify-center transition-all duration-300 border-2 ${selectedMethod === "BCA" ? "border-cyan-400 ring-2 ring-cyan-200 scale-[1.02] shadow-cyan-200/50 shadow-lg" : "border-transparent opacity-80 hover:opacity-100 grayscale hover:grayscale-0"}`}
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 z-0"></div>
+                            <div className="relative z-10 flex flex-col items-start">
+                                <h3 className="text-white font-black text-2xl italic tracking-tighter drop-shadow-md">BCA</h3>
+                                <span className="text-cyan-100 text-[10px] font-bold tracking-widest uppercase mt-1">Transfer Bank</span>
                             </div>
-                            <Button size="icon" variant="ghost" onClick={() => copyToClipboard("5015171330")}>
-                                <Copy className="h-4 w-4 text-slate-400" />
-                            </Button>
-                        </div>
+                        </button>
+
+                        {/* DANA Button - Purple Gradient */}
+                        <button
+                            onClick={() => setSelectedMethod("DANA")}
+                            className={`relative overflow-hidden rounded-xl p-4 h-24 flex flex-col items-start justify-center transition-all duration-300 border-2 ${selectedMethod === "DANA" ? "border-purple-400 ring-2 ring-purple-200 scale-[1.02] shadow-purple-200/50 shadow-lg" : "border-transparent opacity-80 hover:opacity-100 grayscale hover:grayscale-0"}`}
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-fuchsia-600 z-0"></div>
+                            <div className="relative z-10 flex flex-col items-start">
+                                <h3 className="text-white font-black text-2xl tracking-tighter drop-shadow-md">DANA</h3>
+                                <span className="text-purple-100 text-[10px] font-bold tracking-widest uppercase mt-1">E-Wallet</span>
+                            </div>
+                        </button>
                     </div>
 
-                    {/* QRIS Section */}
-                    <div className="text-center space-y-2">
-                        <div className="text-sm font-bold text-slate-500 mb-1">ATAU SCAN QRIS (DANA/GOPAY)</div>
-                        <div className="relative w-full aspect-square bg-slate-100 rounded-xl overflow-hidden border-2 border-slate-200 flex items-center justify-center">
-                            {/* Using standard img tag for local file compatibility if Next Image fails with external paths sometimes */}
-                            <img
-                                src="/qris-manual.png"
-                                alt="QRIS Code"
-                                className="w-full h-full object-contain"
-                            />
+                    {/* Active Method Details */}
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-inner">
+                        <div className="text-center mb-4">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">
+                                {selectedMethod === "BCA" ? "Silahkan Transfer Ke" : "Scan QRIS / Kirim Ke"}
+                            </span>
                         </div>
+
+                        {selectedMethod === "BCA" && (
+                            <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                                <div className="flex flex-col text-left">
+                                    <span className="font-mono font-bold text-xl text-slate-800 tracking-tight">501 517 1330</span>
+                                    <span className="text-xs text-slate-500 font-bold uppercase">Muhamad Ikbal (BCA)</span>
+                                </div>
+                                <Button size="icon" variant="ghost" onClick={() => copyToClipboard("5015171330")} className="hover:bg-cyan-50 text-cyan-600">
+                                    <Copy className="h-5 w-5" />
+                                </Button>
+                            </div>
+                        )}
+
+                        {selectedMethod === "DANA" && (
+                            <div className="flex flex-col gap-4">
+                                {/* DANA Number */}
+                                <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                                    <div className="flex flex-col text-left">
+                                        <span className="font-mono font-bold text-xl text-slate-800 tracking-tight">0897 8646 573</span>
+                                        <span className="text-xs text-slate-500 font-bold uppercase">Muhamad Ikbal (DANA)</span>
+                                    </div>
+                                    <Button size="icon" variant="ghost" onClick={() => copyToClipboard("08978646573")} className="hover:bg-purple-50 text-purple-600">
+                                        <Copy className="h-5 w-5" />
+                                    </Button>
+                                </div>
+
+                                {/* Divider */}
+                                <div className="flex items-center gap-2">
+                                    <div className="h-px bg-slate-200 flex-1"></div>
+                                    <span className="text-[10px] text-slate-400 font-bold">ATAU SCAN QRIS</span>
+                                    <div className="h-px bg-slate-200 flex-1"></div>
+                                </div>
+
+                                {/* QRIS Image */}
+                                <div className="relative w-full aspect-square max-w-[200px] mx-auto bg-white rounded-xl overflow-hidden border-2 border-slate-100 p-2 shadow-sm">
+                                    <img
+                                        src="/qris-manual.png"
+                                        alt="QRIS Code"
+                                        className="w-full h-full object-contain"
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200 text-xs text-yellow-800 text-center">
-                        ⚠️ <strong>PENTING:</strong> Setelah transfer, wajib klik tombol di bawah agar Admin bisa memverifikasi.
+                    <div className="bg-amber-50 p-3 rounded-lg border border-amber-200 text-xs text-amber-800 text-center flex items-center justify-center gap-2">
+                        <span>⚠️</span>
+                        <span><strong>PENTING:</strong> Wajib klik tombol konfirmasi di bawah setelah transfer.</span>
                     </div>
                 </div>
 
