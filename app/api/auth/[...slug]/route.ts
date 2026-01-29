@@ -196,6 +196,78 @@ async function handleRegister(req: Request) {
     }
 }
 
+async function handleGoogleLogin(req: Request) {
+    try {
+        const body = await req.json();
+        const { token, guestId } = body;
+
+        if (!token) return NextResponse.json({ message: "No token provided" }, { status: 400 });
+
+        // VERIFY TOKEN WITH GOOGLE
+        // We use the public endpoint to verify the ID token.
+        // In production, using a library like google-auth-library is robust, but a fetch to googleapis is also standard for simple checks.
+        const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
+        const googleData = await googleRes.json();
+
+        if (googleData.error || !googleData.email) {
+            return NextResponse.json({ message: "Invalid Google Token" }, { status: 401 });
+        }
+
+        // Verify Audience to prevent token reuse from other apps
+        if (googleData.aud !== "378278493006-9t7lsnqep353agi08r1jjo1femaohbjs.apps.googleusercontent.com") {
+            return NextResponse.json({ message: "Token Client ID Mismatch" }, { status: 401 });
+        }
+
+        const email = googleData.email;
+        const name = googleData.name || "Google User";
+        const emailVerified = googleData.email_verified === "true" || googleData.email_verified === true;
+
+        if (!emailVerified) {
+            return NextResponse.json({ message: "Google Email not verified" }, { status: 401 });
+        }
+
+        // CHECK USER EXISTENCE
+        const users = await tursoQuery("SELECT * FROM users WHERE email = ?", [email]);
+        let userId = users[0]?.id;
+
+        if (userId) {
+            // LOGIN EXISTING USER
+            return NextResponse.json({ success: true, userId, name: users[0].name });
+        } else {
+            // REGISTER NEW USER (Auto-create)
+            // Note: We skip the disposable domain check because Google Accounts are generally trusted/personal
+
+            userId = crypto.randomUUID();
+            const now = Date.now();
+            // Generate a random high-entropy password since they won't use it
+            const randomPassword = crypto.randomUUID() + crypto.randomUUID();
+            const hashedPassword = await hashPassword(randomPassword);
+
+            // Handle Guest Conversion if guestId provided
+            if (guestId) {
+                const guestUsers = await tursoQuery("SELECT * FROM users WHERE id = ? AND role = 'guest'", [guestId]);
+                if (guestUsers.length > 0) {
+                    await tursoExecute("UPDATE users SET name = ?, email = ?, password = ?, role = 'user' WHERE id = ?", [name, email, hashedPassword, guestId]);
+                    await tursoExecute("UPDATE user_progress SET user_name = ?, points = 10, hearts = 3, is_guest = 0, has_active_subscription = 0, subscription_ends_at = NULL WHERE user_id = ?",
+                        [name, guestId]);
+                    return NextResponse.json({ success: true, userId: guestId, name, message: "Account linked with Google!" });
+                }
+            }
+
+            // Normal New User
+            await tursoExecute("INSERT INTO users (id, name, email, password, role, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                [userId, name, email, hashedPassword, "user", now]);
+            await tursoExecute("INSERT INTO user_progress (user_id, user_name, user_image, hearts, points, is_guest, has_active_subscription, subscription_ends_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                [userId, name, "/mascot.svg", 3, 10, 0, 0, null]);
+
+            return NextResponse.json({ success: true, userId, name, message: "Welcome! Account created via Google." });
+        }
+
+    } catch (e) {
+        return NextResponse.json({ message: String(e) }, { status: 500 });
+    }
+}
+
 // --------------------------------------------------------------------------------
 // DISPATCHER
 // --------------------------------------------------------------------------------
@@ -213,6 +285,7 @@ export async function POST(req: Request, context: { params: Promise<{ slug: stri
     switch (path) {
         case "guest": return handleGuest();
         case "login": return handleLogin(req);
+        case "google": return handleGoogleLogin(req);
         case "register": return handleRegister(req);
         default: return new NextResponse("Not Found", { status: 404 });
     }

@@ -114,6 +114,82 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose, isProFlow }:
         return isProFlow ? "LANJUT KE PEMBAYARAN" : "BUAT AKUN";
     };
 
+    // Inject Google Script
+    const loadGoogleScript = () => {
+        const script = document.createElement("script");
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+            initializeGoogle();
+        };
+        document.body.appendChild(script);
+    };
+
+    const initializeGoogle = () => {
+        if (!window.google) return;
+
+        window.google.accounts.id.initialize({
+            client_id: "378278493006-9t7lsnqep353agi08r1jjo1femaohbjs.apps.googleusercontent.com",
+            callback: handleGoogleResponse
+        });
+
+        window.google.accounts.id.renderButton(
+            document.getElementById("googleButton"),
+            { theme: "outline", size: "large", width: "100%", text: mode === "login" ? "signin_with" : "signup_with" }
+        );
+    };
+
+    const handleGoogleResponse = async (response: any) => {
+        setIsLoading(true);
+        try {
+            const res = await fetch("/api/auth/google", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token: response.credential, guestId: useUserProgress.getState().isGuest ? useUserProgress.getState().userId : null })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                toast.error(data.message || "Google Login failed");
+                return;
+            }
+
+            toast.success("Login Successful via Google!");
+            login({
+                userId: data.userId,
+                userName: data.name,
+                isGuest: false
+            });
+
+            setTimeout(() => {
+                useUserProgress.getState().refreshUserData();
+            }, 100);
+
+            setOpen(false);
+            onSuccess();
+
+        } catch (error) {
+            console.error(error);
+            toast.error("Google Login Error");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Load script on mount
+    import { useEffect } from "react"; // Ensure this is imported
+    useEffect(() => {
+        if (open) {
+            if (window.google) {
+                initializeGoogle();
+            } else {
+                loadGoogleScript();
+            }
+        }
+    }, [open, mode]);
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogContent className="sm:max-w-[425px] bg-[#162f21] border-[#23482f] text-white">
@@ -131,74 +207,85 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose, isProFlow }:
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-4">
-                    {mode === "register" && (
+                <div className="py-4 flex flex-col gap-4">
+                    {/* GOOGLE BUTTON */}
+                    <div id="googleButton" className="w-full min-h-[40px]"></div>
+
+                    <div className="flex items-center gap-2">
+                        <div className="h-[1px] bg-slate-700 flex-1"></div>
+                        <span className="text-xs text-slate-500 font-bold">OR</span>
+                        <div className="h-[1px] bg-slate-700 flex-1"></div>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                        {mode === "register" && (
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Name</Label>
+                                <Input
+                                    id="name"
+                                    name="name"
+                                    placeholder="Your Name"
+                                    value={formData.name}
+                                    onChange={handleChange}
+                                    required
+                                    className="bg-black/20 border-[#23482f] text-white placeholder:text-slate-600 focus-visible:ring-primary"
+                                />
+                            </div>
+                        )}
+
                         <div className="space-y-2">
-                            <Label htmlFor="name">Name</Label>
+                            <Label htmlFor="email">Email</Label>
                             <Input
-                                id="name"
-                                name="name"
-                                placeholder="Your Name"
-                                value={formData.name}
+                                id="email"
+                                name="email"
+                                type="email"
+                                placeholder="hello@example.com"
+                                value={formData.email}
                                 onChange={handleChange}
                                 required
                                 className="bg-black/20 border-[#23482f] text-white placeholder:text-slate-600 focus-visible:ring-primary"
                             />
                         </div>
-                    )}
 
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                            id="email"
-                            name="email"
-                            type="email"
-                            placeholder="hello@example.com"
-                            value={formData.email}
-                            onChange={handleChange}
-                            required
-                            className="bg-black/20 border-[#23482f] text-white placeholder:text-slate-600 focus-visible:ring-primary"
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input
-                            id="password"
-                            name="password"
-                            type="password"
-                            placeholder="••••••"
-                            value={formData.password}
-                            onChange={handleChange}
-                            required
-                            className="bg-black/20 border-[#23482f] text-white placeholder:text-slate-600 focus-visible:ring-primary"
-                        />
-                    </div>
-
-                    {mode === "register" && !isProFlow && (
-                        <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg flex items-center gap-3 text-xs text-primary font-bold">
-                            <CheckCircle className="h-4 w-4" />
-                            Bonus: 10 Gems untuk user baru!
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Password</Label>
+                            <Input
+                                id="password"
+                                name="password"
+                                type="password"
+                                placeholder="••••••"
+                                value={formData.password}
+                                onChange={handleChange}
+                                required
+                                className="bg-black/20 border-[#23482f] text-white placeholder:text-slate-600 focus-visible:ring-primary"
+                            />
                         </div>
-                    )}
 
-                    {mode === "register" && isProFlow && (
-                        <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg flex items-center gap-3 text-xs text-amber-500 font-bold">
-                            <CheckCircle className="h-4 w-4" />
-                            Aktivasi Jawara PRO setelah pembayaran.
-                        </div>
-                    )}
+                        {mode === "register" && !isProFlow && (
+                            <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg flex items-center gap-3 text-xs text-primary font-bold">
+                                <CheckCircle className="h-4 w-4" />
+                                Bonus: 10 Gems untuk user baru!
+                            </div>
+                        )}
 
-                    <Button
-                        type="submit"
-                        size="lg"
-                        className="w-full font-bold bg-primary text-[#112217] hover:bg-primary/90 mt-2"
-                        disabled={isLoading}
-                    >
-                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                        {mode === "login" ? "LOG IN" : "START LEARNING"}
-                    </Button>
-                </form>
+                        {mode === "register" && isProFlow && (
+                            <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg flex items-center gap-3 text-xs text-amber-500 font-bold">
+                                <CheckCircle className="h-4 w-4" />
+                                Aktivasi Jawara PRO setelah pembayaran.
+                            </div>
+                        )}
+
+                        <Button
+                            type="submit"
+                            size="lg"
+                            className="w-full font-bold bg-primary text-[#112217] hover:bg-primary/90 mt-2"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            {mode === "login" ? "LOG IN" : "START LEARNING"}
+                        </Button>
+                    </form>
+                </div>
 
                 <div className="text-center text-sm text-slate-400">
                     {mode === "login" ? "Don't have an account? " : "Already have an account? "}
