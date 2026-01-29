@@ -114,7 +114,7 @@ export const ManualPaymentModal = ({
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-inner">
                         <div className="text-center mb-4">
                             <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">
-                                {selectedMethod === "BCA" ? "Silahkan Transfer Ke" : "Scan QRIS / Kirim Ke"}
+                                {selectedMethod === "BCA" ? "Silahkan Transfer Ke" : "Scan QRIS"}
                             </span>
                         </div>
 
@@ -132,32 +132,17 @@ export const ManualPaymentModal = ({
 
                         {selectedMethod === "DANA" && (
                             <div className="flex flex-col gap-4">
-                                {/* DANA Number */}
-                                <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-                                    <div className="flex flex-col text-left">
-                                        <span className="font-mono font-bold text-xl text-slate-800 tracking-tight">0897 8646 573</span>
-                                        <span className="text-xs text-slate-500 font-bold uppercase">Muhamad Ikbal (DANA)</span>
-                                    </div>
-                                    <Button size="icon" variant="ghost" onClick={() => copyToClipboard("08978646573")} className="hover:bg-purple-50 text-purple-600">
-                                        <Copy className="h-5 w-5" />
-                                    </Button>
-                                </div>
-
-                                {/* Divider */}
-                                <div className="flex items-center gap-2">
-                                    <div className="h-px bg-slate-200 flex-1"></div>
-                                    <span className="text-[10px] text-slate-400 font-bold">ATAU SCAN QRIS</span>
-                                    <div className="h-px bg-slate-200 flex-1"></div>
-                                </div>
-
                                 {/* QRIS Image */}
-                                <div className="relative w-full aspect-square max-w-[200px] mx-auto bg-white rounded-xl overflow-hidden border-2 border-slate-100 p-2 shadow-sm">
+                                <div className="relative w-full aspect-square max-w-[250px] mx-auto bg-white rounded-xl overflow-hidden border-2 border-slate-100 p-2 shadow-sm">
                                     <img
                                         src="/qris-manual.png"
                                         alt="QRIS Code"
                                         className="w-full h-full object-contain"
                                     />
                                 </div>
+                                <p className="text-center text-xs text-slate-400">
+                                    Scan menggunakan aplikasi DANA, GoPay, OVO, atau ShopeePay.
+                                </p>
                             </div>
                         )}
                     </div>
