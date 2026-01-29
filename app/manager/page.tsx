@@ -965,7 +965,7 @@ export default function ManagerPage() {
                                 {(users || []).map((u) => (
                                     <tr key={u.userId} className="border-b hover:bg-slate-50">
                                         <td className="p-4 font-mono text-xs text-slate-500">
-                                            {u.userId.substring(0, 8)}...
+                                            {(u.userId || "unknown").substring(0, 8)}...
                                             <span className="block text-xs font-bold text-slate-700">{u.userName}</span>
                                         </td>
                                         <td className="p-4">
