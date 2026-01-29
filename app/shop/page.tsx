@@ -123,6 +123,15 @@ function ShopContent() {
 
     // Triggered when confirming inside ProModal
     const handleConfirmUpgrade = async () => {
+        // MANUAL PAYMENT FLOW for PRO
+        if (useManualPayment) {
+            setShowProModal(false);
+            setManualAmount(49000);
+            setManualPlanType("PRO_MONTHLY");
+            setShowManualModal(true);
+            return;
+        }
+
         setIsProcessing(true);
         try {
             // 1. Request Payment Link
