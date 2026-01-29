@@ -424,6 +424,43 @@ function ShopContent() {
                     </div>
 
                     <div className="w-full space-y-12">
+                        {/* GLOBAL PAYMENT METHOD TOGGLE */}
+                        <div className="w-full">
+                            <div className="bg-[#14532d] p-4 rounded-xl border-2 border-[#166534] flex flex-col md:flex-row items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-amber-100 p-2 rounded-lg">
+                                        <Image src={useManualPayment ? "/bca.png" : "/mascot.svg"} width={32} height={32} alt="Payment" className="object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-white text-lg">Metode Pembayaran</h3>
+                                        <p className="text-white/70 text-sm">
+                                            {useManualPayment ? "Transfer Manual (BCA / QRIS)" : "Otomatis (Midtrans)"}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 bg-[#022c22] p-1 rounded-lg border border-[#166534]">
+                                    <button
+                                        onClick={() => setUseManualPayment(false)}
+                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${!useManualPayment ? "bg-green-500 text-white shadow" : "text-white/50 hover:text-white"}`}
+                                    >
+                                        Otomatis
+                                    </button>
+                                    <button
+                                        onClick={() => setUseManualPayment(true)}
+                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${useManualPayment ? "bg-amber-500 text-white shadow" : "text-white/50 hover:text-white"}`}
+                                    >
+                                        Manual
+                                    </button>
+                                </div>
+                            </div>
+                            {useManualPayment && (
+                                <div className="mt-2 text-xs text-amber-300 text-center animate-pulse">
+                                    * Metode manual membutuhkan verifikasi Admin (Max 24 jam).
+                                </div>
+                            )}
+                        </div>
+
                         {/* PRO SECTION */}
                         <div className="w-full p-1 bg-gradient-to-r from-amber-300 to-orange-400 rounded-2xl shadow-lg shadow-orange-100">
                             <div className="bg-amber-50 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 h-full">
@@ -486,109 +523,126 @@ function ShopContent() {
                         </div>
 
                         {/* TOP UP GEMS SECTION */}
-                        <div>
-                            <h2 className="text-xl font-bold text-sky-400 mb-6 flex items-center gap-2">
-                                <Gem className="text-sky-400 fill-sky-400" /> Top Up Gems
-                            </h2>
+                        <h2 className="text-xl font-bold text-sky-400 mb-6 flex items-center gap-2">
+                            <Gem className="text-sky-400 fill-sky-400" /> Top Up Gems
+                        </h2>
 
-                            {/* PAYMENT METHOD TOGGLE */}
-                            <div className="w-full mb-6">
-                                <div className="bg-[#14532d] p-4 rounded-xl border-2 border-[#166534] flex flex-col md:flex-row items-center justify-between gap-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-amber-100 p-2 rounded-lg">
-                                            <Image src={useManualPayment ? "/bca.png" : "/mascot.svg"} width={32} height={32} alt="Payment" className="object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-white text-lg">Metode Pembayaran</h3>
-                                            <p className="text-white/70 text-sm">
-                                                {useManualPayment ? "Transfer Manual (BCA / QRIS)" : "Otomatis (Midtrans)"}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 bg-[#022c22] p-1 rounded-lg border border-[#166534]">
-                                        <button
-                                            onClick={() => setUseManualPayment(false)}
-                                            className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${!useManualPayment ? "bg-green-500 text-white shadow" : "text-white/50 hover:text-white"}`}
-                                        >
-                                            Otomatis
-                                        </button>
-                                        <button
-                                            onClick={() => setUseManualPayment(true)}
-                                            className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${useManualPayment ? "bg-amber-500 text-white shadow" : "text-white/50 hover:text-white"}`}
-                                        >
-                                            Manual
-                                        </button>
-                                    </div>
-                                </div>
-                                {useManualPayment && (
-                                    <div className="mt-2 text-xs text-amber-300 text-center animate-pulse">
-                                        * Metode manual membutuhkan verifikasi Admin (Max 24 jam).
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <ShopItem
-                                    name="Streak Freeze"
-                                    description="Jaga streak-mu tetap aman meskipun absen sehari."
-                                    Icon={Flame}
-                                    iconColor="text-orange-500 fill-orange-500"
-                                    price={2000}
-                                    points={points}
-                                    hasActive={false}
-                                    activeTitle="BEKU SIHIR"
-                                    onBuy={handleBuyFreeze}
-                                />
-                            </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <ShopItem
+                                name="Streak Freeze"
+                                description="Jaga streak-mu tetap aman meskipun absen sehari."
+                                Icon={Flame}
+                                iconColor="text-orange-500 fill-orange-500"
+                                price={2000}
+                                points={points}
+                                hasActive={false}
+                                activeTitle="BEKU SIHIR"
+                                onBuy={handleBuyFreeze}
+                            />
                         </div>
+                    </div>
 
-                        {/* GEMS GRID */}
+                    {/* GEMS GRID */}
+                    <div>
+                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                            <Gem className="text-sky-500 fill-sky-500" /> Top Up Gems
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <ShopItem
+                                name="Segenggam Gems"
+                                description="10 Gems"
+                                Icon={Gem}
+                                iconColor="text-sky-400 fill-sky-400"
+                                price={0}
+                                priceText="Rp 1.000"
+                                points={points}
+                                hasActive={false}
+                                onBuy={() => handleBuyGems(10, "Rp 1.000")}
+                            />
+                            <ShopItem
+                                name="Karung Gems"
+                                description="55 Gems"
+                                Icon={Gem}
+                                iconColor="text-sky-500 fill-sky-500"
+                                price={0}
+                                priceText="Rp 5.000"
+                                points={points}
+                                hasActive={false}
+                                onBuy={() => handleBuyGems(55, "Rp 5.000")}
+                                isPopular
+                            />
+                            <ShopItem
+                                name="Peti Harta"
+                                description="120 Gems"
+                                Icon={Gem}
+                                iconColor="text-indigo-500 fill-indigo-500"
                         <div>
-                            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                <Gem className="text-sky-500 fill-sky-500" /> Top Up Gems
-                            </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <ShopItem
-                                    name="Segenggam Gems"
-                                    description="10 Gems"
-                                    Icon={Gem}
-                                    iconColor="text-sky-400 fill-sky-400"
-                                    price={0}
-                                    priceText="Rp 1.000"
-                                    points={points}
-                                    hasActive={false}
-                                    onBuy={() => handleBuyGems(10, "Rp 1.000")}
-                                />
-                                <ShopItem
-                                    name="Karung Gems"
-                                    description="55 Gems"
-                                    Icon={Gem}
-                                    iconColor="text-sky-500 fill-sky-500"
-                                    price={0}
-                                    priceText="Rp 5.000"
-                                    points={points}
-                                    hasActive={false}
-                                    onBuy={() => handleBuyGems(55, "Rp 5.000")}
-                                    isPopular
-                                />
-                                <ShopItem
-                                    name="Peti Harta"
-                                    description="120 Gems"
-                                    Icon={Gem}
-                                    iconColor="text-indigo-500 fill-indigo-500"
-                                    price={0}
-                                    priceText="Rp 10.000"
-                                    points={points}
-                                    hasActive={false}
-                                    onBuy={() => handleBuyGems(120, "Rp 10.000")}
-                                />
+                                <h2 className="text-xl font-bold text-sky-400 mb-6 flex items-center gap-2">
+                                    <Gem className="text-sky-400 fill-sky-400" /> Top Up Gems
+                                </h2>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <ShopItem
+                                        name="Streak Freeze"
+                                        description="Jaga streak-mu tetap aman meskipun absen sehari."
+                                        Icon={Flame}
+                                        iconColor="text-orange-500 fill-orange-500"
+                                        price={2000}
+                                        points={points}
+                                        hasActive={false}
+                                        activeTitle="BEKU SIHIR"
+                                        onBuy={handleBuyFreeze}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* GEMS GRID */}
+                            <div>
+                                <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                                    <Gem className="text-sky-500 fill-sky-500" /> Top Up Gems
+                                </h2>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <ShopItem
+                                        name="Segenggam Gems"
+                                        description="10 Gems"
+                                        Icon={Gem}
+                                        iconColor="text-sky-400 fill-sky-400"
+                                        price={0}
+                                        priceText="Rp 1.000"
+                                        points={points}
+                                        hasActive={false}
+                                        onBuy={() => handleBuyGems(10, "Rp 1.000")}
+                                    />
+                                    <ShopItem
+                                        name="Karung Gems"
+                                        description="55 Gems"
+                                        Icon={Gem}
+                                        iconColor="text-sky-500 fill-sky-500"
+                                        price={0}
+                                        priceText="Rp 5.000"
+                                        points={points}
+                                        hasActive={false}
+                                        onBuy={() => handleBuyGems(55, "Rp 5.000")}
+                                        isPopular
+                                    />
+                                    <ShopItem
+                                        name="Peti Harta"
+                                        description="120 Gems"
+                                        Icon={Gem}
+                                        iconColor="text-indigo-500 fill-indigo-500"
+                                        price={0}
+                                        priceText="Rp 10.000"
+                                        points={points}
+                                        hasActive={false}
+                                        onBuy={() => handleBuyGems(120, "Rp 10.000")}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 
 }
