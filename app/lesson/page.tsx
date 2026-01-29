@@ -6,7 +6,7 @@ import { QuestionBubble } from "@/components/lesson/question-bubble";
 import { Footer } from "@/components/lesson/footer";
 import { useSounds } from "@/hooks/use-sounds";
 import { useSpeech } from "@/hooks/use-speech";
-import { Zap, Trophy, Clock, Target } from "lucide-react";
+import { Zap, Trophy, Clock, Target, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WordCard } from "@/components/lesson/word-card";
 import { useUserProgress } from "@/store/use-user-progress";
@@ -56,6 +56,38 @@ function LessonContent() {
 
     // State to hold the dynamic queue of challenges (Duolingo Style: Wrong -> Append to end)
     const [challenges, setChallenges] = useState(initialChallenges);
+
+    // Manager Notification State
+    const [isLoadingManager, setIsLoadingManager] = useState(false);
+    const [isNotified, setIsNotified] = useState(false);
+
+    const handleNotifyManager = async () => {
+        setIsLoadingManager(true);
+        try {
+            // Signal to Manager API
+            await fetch("/api/notify-manager", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId: "current-user", // In real app use actual ID
+                    course: courseType,
+                    timestamp: new Date().toISOString()
+                })
+            });
+
+            // Artificial Delay for "Professional" feel
+            setTimeout(() => {
+                setIsLoadingManager(false);
+                setIsNotified(true);
+                toast.success("Laporan Terkirim ke Manager!");
+            }, 2000);
+
+        } catch (error) {
+            console.error("Failed to notify manager", error);
+            setIsLoadingManager(false);
+            toast.error("Gagal menghubungi server");
+        }
+    };
 
     // Safety check if data load fails initially
     useEffect(() => {
@@ -364,21 +396,62 @@ function LessonContent() {
                     </div>
                 </div>
 
-                <div className="w-full max-w-sm mt-8 border-t-2 border-slate-100 pt-8">
-                    <Button
-                        size="lg"
-                        className="w-full font-bold text-lg h-12 uppercase tracking-wide"
-                        onClick={() => {
-                            if (isGuest) {
-                                setShowAuthModal(true);
-                            } else {
-                                router.push("/learn");
-                            }
-                        }}
-                    >
-                        Lanjutkan
-                    </Button>
-                </div>
+                {/* MANAGER NOTIFICATION LOGIC */}
+                {isCourseFinished && (
+                    <div className="w-full max-w-sm mt-8 border-t-2 border-slate-100 pt-8">
+                        {isNotified ? (
+                            <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-500">
+                                <div className="bg-slate-100 p-6 rounded-2xl border-2 border-slate-200 w-full text-center">
+                                    <Loader2 className="h-10 w-10 text-purple-500 animate-spin mx-auto mb-4" />
+                                    <h3 className="text-lg font-bold text-slate-700 mb-2">Menunggu Manager...</h3>
+                                    <p className="text-sm text-slate-500">
+                                        Laporan kemenanganmu telah dikirim. <br />
+                                        Mohon tunggu, Manager sedang menyiapkan materi Level Selanjutnya untukmu.
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                    Signal Sent to /manager
+                                </div>
+                            </div>
+                        ) : (
+                            <Button
+                                size="lg"
+                                className="w-full font-bold text-lg h-12 uppercase tracking-wide bg-purple-600 hover:bg-purple-700 ring-purple-200"
+                                onClick={handleNotifyManager}
+                                disabled={isLoadingManager}
+                            >
+                                {isLoadingManager ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                        Mengirim Laporan...
+                                    </>
+                                ) : (
+                                    "Lapor ke Manager 🚀"
+                                )}
+                            </Button>
+                        )}
+                    </div>
+                )}
+
+                {/* NORMAL FLOW (NOT FINISHED) */}
+                {!isCourseFinished && (
+                    <div className="w-full max-w-sm mt-8 border-t-2 border-slate-100 pt-8">
+                        <Button
+                            size="lg"
+                            className="w-full font-bold text-lg h-12 uppercase tracking-wide"
+                            onClick={() => {
+                                if (isGuest) {
+                                    setShowAuthModal(true);
+                                } else {
+                                    router.push("/learn");
+                                }
+                            }}
+                        >
+                            Lanjutkan
+                        </Button>
+                    </div>
+                )}
             </div>
         );
     }
