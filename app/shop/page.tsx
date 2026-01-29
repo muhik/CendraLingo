@@ -576,72 +576,62 @@ function ShopContent() {
                                 description="120 Gems"
                                 Icon={Gem}
                                 iconColor="text-indigo-500 fill-indigo-500"
-                        <div>
-                                <h2 className="text-xl font-bold text-sky-400 mb-6 flex items-center gap-2">
-                                    <Gem className="text-sky-400 fill-sky-400" /> Top Up Gems
-                                </h2>
+                                iconColor="text-orange-500 fill-orange-500"
+                                price={2000}
+                                points={points}
+                                hasActive={false}
+                                activeTitle="BEKU SIHIR"
+                                onBuy={handleBuyFreeze}
+                            />
+                        </div>
+                    </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    <ShopItem
-                                        name="Streak Freeze"
-                                        description="Jaga streak-mu tetap aman meskipun absen sehari."
-                                        Icon={Flame}
-                                        iconColor="text-orange-500 fill-orange-500"
-                                        price={2000}
-                                        points={points}
-                                        hasActive={false}
-                                        activeTitle="BEKU SIHIR"
-                                        onBuy={handleBuyFreeze}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* GEMS GRID */}
-                            <div>
-                                <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                    <Gem className="text-sky-500 fill-sky-500" /> Top Up Gems
-                                </h2>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <ShopItem
-                                        name="Segenggam Gems"
-                                        description="10 Gems"
-                                        Icon={Gem}
-                                        iconColor="text-sky-400 fill-sky-400"
-                                        price={0}
-                                        priceText="Rp 1.000"
-                                        points={points}
-                                        hasActive={false}
-                                        onBuy={() => handleBuyGems(10, "Rp 1.000")}
-                                    />
-                                    <ShopItem
-                                        name="Karung Gems"
-                                        description="55 Gems"
-                                        Icon={Gem}
-                                        iconColor="text-sky-500 fill-sky-500"
-                                        price={0}
-                                        priceText="Rp 5.000"
-                                        points={points}
-                                        hasActive={false}
-                                        onBuy={() => handleBuyGems(55, "Rp 5.000")}
-                                        isPopular
-                                    />
-                                    <ShopItem
-                                        name="Peti Harta"
-                                        description="120 Gems"
-                                        Icon={Gem}
-                                        iconColor="text-indigo-500 fill-indigo-500"
-                                        price={0}
-                                        priceText="Rp 10.000"
-                                        points={points}
-                                        hasActive={false}
-                                        onBuy={() => handleBuyGems(120, "Rp 10.000")}
-                                    />
-                                </div>
-                            </div>
+                    {/* GEMS GRID */}
+                    <div>
+                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                            <Gem className="text-sky-500 fill-sky-500" /> Top Up Gems
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <ShopItem
+                                name="Segenggam Gems"
+                                description="10 Gems"
+                                Icon={Gem}
+                                iconColor="text-sky-400 fill-sky-400"
+                                price={0}
+                                priceText="Rp 1.000"
+                                points={points}
+                                hasActive={false}
+                                onBuy={() => handleBuyGems(10, "Rp 1.000")}
+                            />
+                            <ShopItem
+                                name="Karung Gems"
+                                description="55 Gems"
+                                Icon={Gem}
+                                iconColor="text-sky-500 fill-sky-500"
+                                price={0}
+                                priceText="Rp 5.000"
+                                points={points}
+                                hasActive={false}
+                                onBuy={() => handleBuyGems(55, "Rp 5.000")}
+                                isPopular
+                            />
+                            <ShopItem
+                                name="Peti Harta"
+                                description="120 Gems"
+                                Icon={Gem}
+                                iconColor="text-indigo-500 fill-indigo-500"
+                                price={0}
+                                priceText="Rp 10.000"
+                                points={points}
+                                hasActive={false}
+                                onBuy={() => handleBuyGems(120, "Rp 10.000")}
+                            />
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+            </div >
         </div >
     );
 
