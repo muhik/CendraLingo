@@ -29,7 +29,9 @@ export const BannerAd = ({ ad, onClose }: BannerAdProps) => {
                 {/* Content */}
                 <div className="flex-1 flex justify-center">
                     {ad.type === 'script' ? (
-                        <ScriptRenderer html={ad.script_code} />
+                        <div className="h-[60px] w-full flex justify-center overflow-hidden">
+                            <ScriptRenderer html={ad.script_code} />
+                        </div>
                     ) : (
                         <a href={ad.target_url} target="_blank" rel="noopener noreferrer" className="block max-w-full">
                             <img

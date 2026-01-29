@@ -48,7 +48,7 @@ export const ScriptRenderer = ({ html, className }: ScriptRendererProps) => {
         <iframe
             ref={iframeRef}
             className={className}
-            style={{ width: '100%', border: 'none', minHeight: '600px', overflow: 'hidden' }}
+            style={{ width: '100%', border: 'none', height: '100%', overflow: 'hidden' }}
             title="Ad Content"
         />
     );
