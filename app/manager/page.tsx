@@ -967,6 +967,7 @@ export default function ManagerPage() {
                                         <td className="p-4 font-mono text-xs text-slate-500">
                                             {(u.userId || "unknown").substring(0, 8)}...
                                             <span className="block text-xs font-bold text-slate-700">{u.userName}</span>
+                                            {u.email && <span className="block text-[10px] text-slate-500">{u.email}</span>}
                                         </td>
                                         <td className="p-4">
                                             {u.hasActiveSubscription ? (

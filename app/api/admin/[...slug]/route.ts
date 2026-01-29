@@ -103,7 +103,11 @@ async function getTreasureSettings() {
 
 async function getUsers() {
     try {
-        const users = await tursoQuery("SELECT * FROM user_progress");
+        const users = await tursoQuery(`
+            SELECT up.*, u.email 
+            FROM user_progress up 
+            LEFT JOIN users u ON up.user_id = u.id
+        `);
         return NextResponse.json(users);
     } catch (e) {
         return NextResponse.json([], { status: 500 });
