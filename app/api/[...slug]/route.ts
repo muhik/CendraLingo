@@ -331,6 +331,7 @@ async function getUserSync(req: Request) {
             userName: user.user_name,
             lastSpinDate: user.last_spin_date,
             isCourseCompleted: Boolean(user.is_course_completed),
+            completedLessons: JSON.parse(user.completed_lessons || "[]"),
         };
 
         return NextResponse.json({ success: true, user: mappedUser });
@@ -373,8 +374,8 @@ async function postUserSync(req: Request) {
             }
 
             await tursoExecute(
-                "UPDATE user_progress SET hearts = ?, points = ?, is_guest = ?, has_active_subscription = ?, cashback_balance = ?, is_course_completed = ? WHERE user_id = ?",
-                [hearts, points, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, newCashback, isCourseCompleted ? 1 : 0, userId]
+                "UPDATE user_progress SET hearts = ?, points = ?, is_guest = ?, has_active_subscription = ?, cashback_balance = ?, is_course_completed = ?, completed_lessons = ? WHERE user_id = ?",
+                [hearts, points, isGuest ? 1 : 0, hasActiveSubscription ? 1 : 0, newCashback, isCourseCompleted ? 1 : 0, JSON.stringify(body.completedLessons || []), userId]
             );
         } else {
             // New user Sync
@@ -382,15 +383,14 @@ async function postUserSync(req: Request) {
             if (points > 1000) {
                 await Security.log(userId, "New User", SecurityEvent.GEMS_MANIPULATION, `New user userSync with high points: ${points}`, SecuritySeverity.HIGH);
                 // Reset to 0
-                const safePoints = 0;
                 await tursoExecute(
-                    "INSERT INTO user_progress (user_id, hearts, points, is_guest, has_active_subscription, cashback_balance, user_name, user_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    [userId, 3, 10, 0, 0, 0, "New User", "/mascot.svg"]
+                    "INSERT INTO user_progress (user_id, hearts, points, is_guest, has_active_subscription, cashback_balance, user_name, user_image, completed_lessons) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    [userId, 3, 10, 0, 0, 0, "New User", "/mascot.svg", "[]"]
                 );
             } else {
                 await tursoExecute(
-                    "INSERT INTO user_progress (user_id, hearts, points, is_guest, has_active_subscription, cashback_balance, user_name, user_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    [userId, 3, 10, 0, 0, 0, "New User", "/mascot.svg"]
+                    "INSERT INTO user_progress (user_id, hearts, points, is_guest, has_active_subscription, cashback_balance, user_name, user_image, completed_lessons) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    [userId, 3, 10, 0, 0, 0, "New User", "/mascot.svg", JSON.stringify(body.completedLessons || [])]
                 );
             }
         }
