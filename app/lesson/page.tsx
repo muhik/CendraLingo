@@ -57,37 +57,40 @@ function LessonContent() {
     // State to hold the dynamic queue of challenges (Duolingo Style: Wrong -> Append to end)
     const [challenges, setChallenges] = useState(initialChallenges);
 
-    // Manager Notification State
-    const [isLoadingManager, setIsLoadingManager] = useState(false);
-    const [isNotified, setIsNotified] = useState(false);
-
-    const handleNotifyManager = async () => {
-        setIsLoadingManager(true);
-        try {
-            // Signal to Manager API
-            await fetch("/api/notify-manager", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    userId: "current-user", // In real app use actual ID
-                    course: courseType,
-                    timestamp: new Date().toISOString()
-                })
-            });
-
-            // Artificial Delay for "Professional" feel
-            setTimeout(() => {
-                setIsLoadingManager(false);
-                setIsNotified(true);
-                toast.success("Laporan Terkirim ke Manager!");
-            }, 2000);
-
-        } catch (error) {
-            console.error("Failed to notify manager", error);
-            setIsLoadingManager(false);
-            toast.error("Gagal menghubungi server");
+    // Safety check if data load fails initially
+    useEffect(() => {
+        if (initialChallenges && challenges.length === 0) {
+            setChallenges(initialChallenges);
         }
-    };
+    }, [initialChallenges]);
+
+    const {
+        hearts,
+        points,
+        addPoints,
+        decreasePoints,
+        completeLesson,
+        reduceHeart,
+        isGuest,
+        isCourseCompleted,
+        completeCourse
+    } = useUserProgress();
+
+    // Calc Is Last Lesson for UI
+    const unit = selectedCurriculum.find(u => u.id === currentLesson?.unitId);
+    const isLastLesson = unit && unit.lessons[unit.lessons.length - 1].id === lessonId;
+
+    // CHECK IF COURSE COMPLETED (Last Unit, Last Lesson)
+    const lastUnit = curriculumData[curriculumData.length - 1];
+    const lastLessonOfCourse = lastUnit.lessons[lastUnit.lessons.length - 1];
+    const isCourseFinished = lastLessonOfCourse.id === lessonId;
+
+    // AUTO NOTIFICATION TRIGGER
+    useEffect(() => {
+        if (completed && isCourseFinished && !isCourseCompleted) {
+            completeCourse(); // Fire and forget
+        }
+    }, [completed, isCourseFinished, isCourseCompleted, completeCourse]);
 
     // Safety check if data load fails initially
     useEffect(() => {
@@ -298,27 +301,13 @@ function LessonContent() {
         const totalAttempts = correctCount + wrongCount;
         const accuracy = totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : 0;
 
-        // Calc Is Last Lesson for UI
-        const unit = selectedCurriculum.find(u => u.id === currentLesson?.unitId);
-        const isLastLesson = unit && unit.lessons[unit.lessons.length - 1].id === lessonId;
-
-        // Recalculate rewards for display (same formula as award logic)
+        // Recalculate rewards for display (using top-scope isLastLesson)
         const baseReward = isLastLesson ? 25 : 10;
         const accuracyBonus = wrongCount === 0 ? 15 : Math.max(0, 15 - (wrongCount * 3));
         const speedBonus = timeTaken < 120000 ? 5 : 0;
         const totalEarned = baseReward + accuracyBonus + speedBonus;
 
-        // CHECK IF COURSE COMPLETED (Last Unit, Last Lesson)
-        const lastUnit = curriculumData[curriculumData.length - 1];
-        const lastLessonOfCourse = lastUnit.lessons[lastUnit.lessons.length - 1];
-        const isCourseFinished = lastLessonOfCourse.id === lessonId;
 
-        if (isCourseFinished && !isCourseCompleted) {
-            // Use setTimeout to avoid "Example: Too many re-renders" or update during render
-            setTimeout(() => {
-                completeCourse();
-            }, 0);
-        }
 
         return (
             <div className="flex flex-col h-screen items-center justify-center p-6 bg-white animate-in fade-in duration-500">
@@ -400,41 +389,23 @@ function LessonContent() {
                     </div>
                 </div>
 
-                {/* MANAGER NOTIFICATION LOGIC */}
+                {/* MANAGER NOTIFICATION LOGIC (AUTO) */}
                 {isCourseFinished && (
-                    <div className="w-full max-w-sm mt-8 border-t-2 border-slate-100 pt-8">
-                        {isNotified ? (
-                            <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-500">
-                                <div className="bg-slate-100 p-6 rounded-2xl border-2 border-slate-200 w-full text-center">
-                                    <Loader2 className="h-10 w-10 text-purple-500 animate-spin mx-auto mb-4" />
-                                    <h3 className="text-lg font-bold text-slate-700 mb-2">Menunggu Manager...</h3>
-                                    <p className="text-sm text-slate-500">
-                                        Laporan kemenanganmu telah dikirim. <br />
-                                        Mohon tunggu, Manager sedang menyiapkan materi Level Selanjutnya untukmu.
-                                    </p>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
-                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                                    Signal Sent to /manager
-                                </div>
+                    <div className="w-full max-w-sm mt-8 border-t-2 border-slate-100 pt-8 animate-in fade-in zoom-in duration-500 delay-300">
+                        <div className="flex flex-col items-center gap-4">
+                            <div className="bg-slate-100 p-6 rounded-2xl border-2 border-slate-200 w-full text-center shadow-sm">
+                                <Loader2 className="h-10 w-10 text-purple-500 animate-spin mx-auto mb-4" />
+                                <h3 className="text-lg font-bold text-slate-700 mb-2">Menunggu Manager...</h3>
+                                <p className="text-sm text-slate-500 leading-relaxed">
+                                    Laporan kemenanganmu sedang dikirim otomatis. <br />
+                                    Mohon tunggu, Manager sedang menyiapkan materi Level Selanjutnya untukmu.
+                                </p>
                             </div>
-                        ) : (
-                            <Button
-                                size="lg"
-                                className="w-full font-bold text-lg h-12 uppercase tracking-wide bg-purple-600 hover:bg-purple-700 ring-purple-200"
-                                onClick={handleNotifyManager}
-                                disabled={isLoadingManager}
-                            >
-                                {isLoadingManager ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                        Mengirim Laporan...
-                                    </>
-                                ) : (
-                                    "Lapor ke Manager 🚀"
-                                )}
-                            </Button>
-                        )}
+                            <div className="flex items-center gap-2 text-xs text-slate-400 font-mono bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
+                                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                Auto-Signal Sent to /manager
+                            </div>
+                        </div>
                     </div>
                 )}
 
