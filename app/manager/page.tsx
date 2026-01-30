@@ -25,6 +25,7 @@ interface Voucher {
 interface UserData {
     userId: string;
     userName: string;
+    email?: string;
     hearts: number;
     points: number;
     hasActiveSubscription: boolean;
@@ -436,18 +437,20 @@ export default function ManagerPage() {
         }
     };
 
-    const handleGrantPro = async (userId: string) => {
-        if (!confirm("Jadikan User ini JAWARA PRO?")) return;
+    const handleGrantPro = async (userId: string, currentStatus: boolean) => {
+        const newStatus = !currentStatus;
+        const confirmMsg = newStatus ? "Jadikan User ini JAWARA PRO?" : "Hapus akses PRO user ini?";
+        if (!confirm(confirmMsg)) return;
 
         await fetch("/api/admin/users/update", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId, hasActiveSubscription: true }),
+            body: JSON.stringify({ userId, hasActiveSubscription: newStatus }),
         });
 
         // Refresh local data
-        setUsers(users.map(u => u.userId === userId ? { ...u, hasActiveSubscription: true } : u));
-        toast.success("User berhasil di-upgrade! 🏆");
+        setUsers(users.map(u => u.userId === userId ? { ...u, hasActiveSubscription: newStatus } : u));
+        toast.success(newStatus ? "User berhasil di-upgrade! 🏆" : "Akses PRO dicabut 🔻");
     };
 
     const copyToClipboard = (text: string) => {
@@ -1094,11 +1097,16 @@ export default function ManagerPage() {
                                             <Button
                                                 size="sm"
                                                 variant="outline"
-                                                className={`border-amber-500 text-amber-600 hover:bg-amber-50 ${u.hasActiveSubscription ? "opacity-50" : ""}`}
-                                                onClick={() => handleGrantPro(u.userId)}
-                                                title={u.hasActiveSubscription ? "Extend Subscription" : "Grant PRO Access"}
+                                                className={`
+                                                    ${u.hasActiveSubscription
+                                                        ? "border-red-500 text-red-600 hover:bg-red-50"
+                                                        : "border-amber-500 text-amber-600 hover:bg-amber-50"
+                                                    }
+                                                `}
+                                                onClick={() => handleGrantPro(u.userId, u.hasActiveSubscription)}
+                                                title={u.hasActiveSubscription ? "Cabut Akses PRO" : "Berikan Akses PRO"}
                                             >
-                                                {u.hasActiveSubscription ? "EXTEND PRO" : "GRANT PRO"}
+                                                {u.hasActiveSubscription ? "REVOKE PRO" : "GRANT PRO"}
                                             </Button>
                                             <Button
                                                 size="sm"
