@@ -92,12 +92,7 @@ function LessonContent() {
         }
     }, [completed, isCourseFinished, isCourseCompleted, completeCourse]);
 
-    // Safety check if data load fails initially
-    useEffect(() => {
-        if (initialChallenges && challenges.length === 0) {
-            setChallenges(initialChallenges);
-        }
-    }, [initialChallenges]);
+
 
     // SELECT State
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -114,18 +109,7 @@ function LessonContent() {
     // Calculate progress (Restored)
     const progressPercentage = challenges.length > 0 ? (activeIndex / challenges.length) * 100 : 0;
 
-    // STORE
-    const {
-        hearts,
-        points,
-        addPoints,
-        decreasePoints,
-        completeLesson,
-        reduceHeart,
-        isGuest,
-        isCourseCompleted, // Destructure this
-        completeCourse
-    } = useUserProgress();
+
 
     useEffect(() => {
         // Reset state on new challenge
