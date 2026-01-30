@@ -1,10 +1,44 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@libsql/client";
 
-const turso = createClient({
-    url: process.env.TURSO_CONNECTION_URL || "",
-    authToken: process.env.TURSO_AUTH_TOKEN || "",
-});
+import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+// Raw Turso Executor
+async function tursoExecute(sql: string, args: any[] = []) {
+    const dbUrl = process.env.TURSO_CONNECTION_URL!;
+    const dbToken = process.env.TURSO_AUTH_TOKEN!;
+    const finalUrl = dbUrl.startsWith("libsql://") ? dbUrl.replace("libsql://", "https://") : dbUrl;
+
+    const response = await fetch(`${finalUrl}/v2/pipeline`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${dbToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+            requests: [
+                { type: "execute", stmt: { sql, args } },
+                { type: "close" },
+            ],
+        }),
+    });
+
+    if (!response.ok) throw new Error(`Database Error: ${response.status}`);
+    const data = await response.json();
+    return data.results[0]?.response?.result;
+}
+
+// Helper to map Turso raw rows to objects
+function mapRows(result: any) {
+    if (!result || !result.cols || !result.rows) return [];
+    const cols = result.cols.map((c: any) => c.name);
+    return result.rows.map((row: any) => {
+        const obj: any = {};
+        cols.forEach((col: string, i: number) => {
+            const cell = row[i];
+            obj[col] = (cell && typeof cell === 'object' && 'value' in cell) ? cell.value : cell;
+        });
+        return obj;
+    });
+}
 
 export async function POST(req: Request) {
     try {
@@ -14,46 +48,44 @@ export async function POST(req: Request) {
         console.log(`[MANAGER_NOTIFY] User ${userId} Completed Course ${courseId} at ${timestamp}`);
 
         // 1. Fetch User Details for nicer notification
-        const userRes = await turso.execute({
-            sql: "SELECT name, user_image FROM users JOIN user_progress ON users.id = user_progress.user_id WHERE users.id = ?",
-            args: [userId]
-        });
-
+        // Try user_progress first
         let userName = "Unknown User";
         let userImage = "/mascot.svg";
 
-        if (userRes.rows.length > 0) {
-            userName = userRes.rows[0].name as string || "User";
-            // Check if user_progress has name/image override or use users table
-            // Actually schema has user_progress.userName too. Let's just use what we found.
-            // The query above joins, but user_progress is the main profile source usually.
-            // Let's simplified fetch from user_progress directly.
-        }
+        const progressRaw = await tursoExecute(
+            "SELECT user_name, user_image FROM user_progress WHERE user_id = ?",
+            [{ type: "text", value: userId }]
+        );
+        const progressRows = mapRows(progressRaw);
 
-        // Simpler Fetch
-        const progressRes = await turso.execute({
-            sql: "SELECT user_name, user_image FROM user_progress WHERE user_id = ?",
-            args: [userId]
-        });
-
-        if (progressRes.rows.length > 0) {
-            userName = progressRes.rows[0].user_name as string;
-            userImage = progressRes.rows[0].user_image as string;
+        if (progressRows.length > 0) {
+            userName = progressRows[0].user_name || "User";
+            userImage = progressRows[0].user_image || "/mascot.svg";
+        } else {
+            // Fallback to users table
+            const userRaw = await tursoExecute(
+                "SELECT name, '/mascot.svg' as user_image FROM users WHERE id = ?",
+                [{ type: "text", value: userId }]
+            );
+            const userRows = mapRows(userRaw);
+            if (userRows.length > 0) {
+                userName = userRows[0].name || "User";
+            }
         }
 
         // 2. Insert Notification
-        await turso.execute({
-            sql: "INSERT INTO manager_notifications (user_id, user_name, user_image, type, message, is_read, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            args: [
-                userId,
-                userName,
-                userImage,
-                "course_completion",
-                `User ${userName} telah menyelesaikan kursus! (Unit & Block Habis)`,
-                0,
-                new Date().toISOString()
+        await tursoExecute(
+            "INSERT INTO manager_notifications (user_id, user_name, user_image, type, message, is_read, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [
+                { type: "text", value: userId },
+                { type: "text", value: userName },
+                { type: "text", value: userImage },
+                { type: "text", value: "course_completion" },
+                { type: "text", value: `User ${userName} telah menyelesaikan kursus! (Unit & Block Habis)` },
+                { type: "integer", value: "0" },
+                { type: "text", value: new Date().toISOString() }
             ]
-        });
+        );
 
         return NextResponse.json({ success: true, message: "Manager notified successfully" });
     } catch (error) {
