@@ -60,6 +60,19 @@ export const useUserProgress = create<UserProgressState>()(
 
             completeCourse: () => {
                 set({ isCourseCompleted: true });
+                const { userId } = get();
+
+                // Fire and forget notification
+                fetch('/api/notify-manager', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId,
+                        courseId: "english-basic", // Default course
+                        timestamp: new Date().toISOString()
+                    })
+                }).catch(err => console.error("Failed to notify manager:", err));
+
                 get().syncWithDb();
             },
 
