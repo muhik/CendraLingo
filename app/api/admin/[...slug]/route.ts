@@ -103,11 +103,26 @@ async function getTreasureSettings() {
 
 async function getUsers() {
     try {
-        const users = await tursoQuery(`
+        const rows = await tursoQuery(`
             SELECT up.*, u.email 
             FROM user_progress up 
             LEFT JOIN users u ON up.user_id = u.id
         `);
+
+        // Map to camelCase
+        const users = rows.map((u: any) => ({
+            userId: u.user_id,
+            userName: u.user_name,
+            email: u.email,
+            userImage: u.user_image,
+            hearts: u.hearts,
+            points: u.points,
+            isCourseCompleted: Boolean(u.is_course_completed),
+            hasActiveSubscription: Boolean(u.has_active_subscription),
+            isGuest: Boolean(u.is_guest),
+            cashbackBalance: u.cashback_balance || 0
+        }));
+
         return NextResponse.json(users);
     } catch (e) {
         return NextResponse.json([], { status: 500 });
