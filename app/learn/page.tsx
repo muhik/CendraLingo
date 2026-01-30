@@ -13,7 +13,7 @@ import { curriculumData, sectionsData } from "@/data/curriculum";
 import { PracticeModal } from "@/components/modals/practice-modal";
 import { GuidebookModal } from "@/components/modals/guidebook-modal";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Unit } from "@/data/curriculum";
 import { UnitHeader } from "@/components/learn/unit-header";
 import { RightSidebar } from "@/components/layout/right-sidebar";
