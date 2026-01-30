@@ -59,13 +59,15 @@ interface Feedback {
 export default function ManagerPage() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [password, setPassword] = useState("");
-    const [activeTab, setActiveTab] = useState<"users" | "vouchers" | "redeem" | "treasure" | "feedback" | "ads" | "security" | "transactions">("vouchers");
+    const [activeTab, setActiveTab] = useState<"users" | "vouchers" | "redeem" | "treasure" | "feedback" | "ads" | "security" | "transactions" | "completions">("vouchers");
 
     // Data State
     const [vouchers, setVouchers] = useState<Voucher[]>([]);
     const [users, setUsers] = useState<UserData[]>([]);
     const [generatedVouchers, setGeneratedVouchers] = useState<Voucher[]>([]);
     const [alerts, setAlerts] = useState<any[]>([]);
+    const [notifications, setNotifications] = useState<any[]>([]);
+    const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
     // Gen State
     const [qty, setQty] = useState(10);
@@ -150,6 +152,25 @@ export default function ManagerPage() {
             })
             .catch(console.error);
     }
+
+    const fetchNotifications = () => {
+        fetch("/api/admin/notifications")
+            .then(res => res.json())
+            .then(data => {
+                setNotifications(data.data || []);
+                setUnreadNotifCount(data.unreadCount || 0);
+            })
+            .catch(console.error);
+    };
+
+    const handleMarkRead = async (id?: number) => {
+        await fetch("/api/admin/notifications", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "mark_read", id })
+        });
+        fetchNotifications();
+    };
 
     const handleApproveManual = async (orderId: string, action: "approve" | "reject") => {
         if (!confirm(`Are you sure you want to ${action.toUpperCase()} this transaction?`)) return;
@@ -356,6 +377,7 @@ export default function ManagerPage() {
     useEffect(() => {
         if (isAuthenticated) {
             fetchRedeemRequests();
+            fetchNotifications(); // Fetch Notifications
             // Fetch Treasure Settings
             fetch(`/api/admin/treasure-settings?t=${Date.now()}`, { cache: "no-store", headers: { "Pragma": "no-cache" } })
                 .then(res => res.json())
@@ -489,18 +511,22 @@ export default function ManagerPage() {
                         <p className="text-slate-500">Pusat Kontrol & Cetak Uang (Manager V2)</p>
                     </div>
                     {/* Course Completion Alert Bell */}
-                    {users.filter(u => u.isCourseCompleted).length > 0 && (
-                        <div
-                            onClick={() => setActiveTab("users")}
-                            className="relative cursor-pointer bg-green-100 p-3 rounded-xl border-2 border-green-400 hover:bg-green-200 transition-all animate-bounce"
-                            title="Ada user yang sudah menyelesaikan course!"
-                        >
-                            <Bell className="h-6 w-6 text-green-600" />
+                    {/* Course Completion Alert Bell */}
+                    <div
+                        onClick={() => setActiveTab("completions")}
+                        className={`relative cursor-pointer p-3 rounded-xl border-2 transition-all ${unreadNotifCount > 0
+                                ? "bg-green-100 border-green-400 hover:bg-green-200 animate-bounce"
+                                : "bg-slate-100 border-slate-300 hover:bg-slate-200"
+                            }`}
+                        title="Notifikasi Kelulusan"
+                    >
+                        <Bell className={`h-6 w-6 ${unreadNotifCount > 0 ? "text-green-600" : "text-slate-500"}`} />
+                        {unreadNotifCount > 0 && (
                             <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center font-bold shadow-lg">
-                                {users.filter(u => u.isCourseCompleted).length}
+                                {unreadNotifCount}
                             </span>
-                        </div>
-                    )}
+                        )}
+                    </div>
                     {/* Redeem Requests Alert Bell */}
                     {pendingRedeemCount > 0 && (
                         <div
@@ -596,6 +622,69 @@ export default function ManagerPage() {
                     </Button>
                 </div>
             </div>
+
+            {/* --- TAB: COMPLETIONS / NOTIFICATIONS --- */}
+            {activeTab === "completions" && (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="p-4 bg-slate-100 border-b border-slate-200 font-bold flex justify-between items-center">
+                        <span>Laporan Kelulusan (User Report)</span>
+                        <div className="flex gap-2">
+                            <Button size="sm" onClick={() => handleMarkRead()} variant="outline" className="text-xs">
+                                Mark All Read
+                            </Button>
+                            <Button size="sm" onClick={fetchNotifications} variant="outline"><RefreshCw className="h-4 w-4" /></Button>
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-slate-50 border-b">
+                                <tr>
+                                    <th className="p-4">WAKTU LAPOR</th>
+                                    <th className="p-4">USER</th>
+                                    <th className="p-4">PESAN</th>
+                                    <th className="p-4">STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {notifications.length === 0 ? (
+                                    <tr><td colSpan={4} className="p-8 text-center text-slate-400">Belum ada laporan masuk.</td></tr>
+                                ) : (
+                                    notifications.map((notif) => (
+                                        <tr key={notif.id} className={`border-b hover:bg-slate-50 ${!notif.is_read ? "bg-green-50" : ""}`}>
+                                            <td className="p-4 text-xs font-mono text-slate-500 whitespace-nowrap">
+                                                {new Date(notif.created_at).toLocaleString("id-ID")}
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="flex items-center gap-3">
+                                                    <img src={notif.user_image || '/mascot.svg'} alt="Avt" className="w-8 h-8 rounded-full bg-slate-200" />
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold">{notif.user_name}</span>
+                                                        <span className="text-xs text-slate-400">{notif.user_id}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 text-slate-700">
+                                                {notif.message}
+                                            </td>
+                                            <td className="p-4">
+                                                {!notif.is_read ? (
+                                                    <Button size="sm" onClick={() => handleMarkRead(notif.id)} className="bg-green-600 hover:bg-green-700 text-xs h-8">
+                                                        Tandai Dibaca
+                                                    </Button>
+                                                ) : (
+                                                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                                                        <CheckCircle className="h-3 w-3" /> Seen
+                                                    </span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             {/* --- TAB: TRANSACTIONS --- */}
             {

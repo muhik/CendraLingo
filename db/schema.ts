@@ -95,3 +95,14 @@ export const feedbacks = sqliteTable("feedbacks", {
     type: text("type").default('saran'),
     createdAt: text("created_at")
 });
+
+export const managerNotifications = sqliteTable("manager_notifications", {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id").notNull(),
+    userName: text("user_name"),
+    userImage: text("user_image"),
+    type: text("type").default('course_completion'), // course_completion, visual_report, etc.
+    message: text("message").notNull(),
+    isRead: integer("is_read", { mode: "boolean" }).default(false),
+    createdAt: text("created_at").default(new Date().toISOString())
+});
