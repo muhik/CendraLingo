@@ -120,7 +120,8 @@ function LessonContent() {
         completeLesson,
         reduceHeart,
         isGuest,
-        completeCourse // Add this
+        isCourseCompleted, // Destructure this
+        completeCourse
     } = useUserProgress();
 
     useEffect(() => {
@@ -312,8 +313,11 @@ function LessonContent() {
         const lastLessonOfCourse = lastUnit.lessons[lastUnit.lessons.length - 1];
         const isCourseFinished = lastLessonOfCourse.id === lessonId;
 
-        if (isCourseFinished) {
-            completeCourse(); // Set Flag in DB
+        if (isCourseFinished && !isCourseCompleted) {
+            // Use setTimeout to avoid "Example: Too many re-renders" or update during render
+            setTimeout(() => {
+                completeCourse();
+            }, 0);
         }
 
         return (
