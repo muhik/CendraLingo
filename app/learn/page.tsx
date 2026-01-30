@@ -23,8 +23,13 @@ import { UnitPathSvg } from "@/components/learn/unit-path-svg";
 import { toast } from "sonner";
 
 export default function LearnPage() {
-    const { completedLessons, points, spendPoints, isCourseCompleted } = useUserProgress();
+    const { completedLessons, points, spendPoints, isCourseCompleted, refreshUserData, userId } = useUserProgress();
     const router = useRouter();
+
+    // Auto-Sync with DB on Mount
+    useEffect(() => {
+        refreshUserData();
+    }, []);
 
     // State for Modals
     const [practiceModalOpen, setPracticeModalOpen] = useState(false);
