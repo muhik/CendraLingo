@@ -59,6 +59,10 @@ export const useUserProgress = create<UserProgressState>()(
             setGuest: (userId: string) => set({ userId, isGuest: true, hearts: 5, points: 0 }),
 
             completeCourse: () => {
+                const { isCourseCompleted } = get();
+                if (isCourseCompleted) return; // Prevent double trigger
+
+                console.log("[UserProgress] Completing Course... (Notification ONLY, No Gems/Pro)");
                 set({ isCourseCompleted: true });
                 const { userId } = get();
 
