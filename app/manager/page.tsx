@@ -515,8 +515,8 @@ export default function ManagerPage() {
                     <div
                         onClick={() => setActiveTab("completions")}
                         className={`relative cursor-pointer p-3 rounded-xl border-2 transition-all ${unreadNotifCount > 0
-                                ? "bg-green-100 border-green-400 hover:bg-green-200 animate-bounce"
-                                : "bg-slate-100 border-slate-300 hover:bg-slate-200"
+                            ? "bg-green-100 border-green-400 hover:bg-green-200 animate-bounce"
+                            : "bg-slate-100 border-slate-300 hover:bg-slate-200"
                             }`}
                         title="Notifikasi Kelulusan"
                     >
@@ -1091,14 +1091,15 @@ export default function ManagerPage() {
                                             </div>
                                         </td>
                                         <td className="p-4">
-                                            {!u.hasActiveSubscription && (
-                                                <Button size="sm" variant="outline" className="border-amber-500 text-amber-600 hover:bg-amber-50" onClick={() => handleGrantPro(u.userId)}>
-                                                    GRANT PRO
-                                                </Button>
-                                            )}
-                                            {u.hasActiveSubscription && (
-                                                <span className="text-xs text-green-600 font-bold">Terverifikasi</span>
-                                            )}
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className={`border-amber-500 text-amber-600 hover:bg-amber-50 ${u.hasActiveSubscription ? "opacity-50" : ""}`}
+                                                onClick={() => handleGrantPro(u.userId)}
+                                                title={u.hasActiveSubscription ? "Extend Subscription" : "Grant PRO Access"}
+                                            >
+                                                {u.hasActiveSubscription ? "EXTEND PRO" : "GRANT PRO"}
+                                            </Button>
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
