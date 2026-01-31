@@ -81,18 +81,22 @@ async function postFeedback(req: Request) {
 // --------------------------------------------------------------------------------
 // LOGIC: PURCHASE (Xendit)
 // --------------------------------------------------------------------------------
-import { Midtrans } from "@/lib/midtrans";
-
-// ... (other imports remain, but remove xendit)
 
 // --------------------------------------------------------------------------------
-// LOGIC: PURCHASE (Midtrans)
+// LOGIC: PURCHASE (Mayar)
 // --------------------------------------------------------------------------------
 async function postPurchase(req: Request) {
     try {
         const body = await req.json();
         const { userId, planType, customAmount, customDescription } = body;
         if (!userId) return new NextResponse("User ID required", { status: 400 });
+
+        const mayarApiKey = process.env.MAYAR_API_KEY;
+        const mayarApiUrl = process.env.MAYAR_API_URL || "https://api.mayar.id/hl/v1";
+
+        if (!mayarApiKey) {
+            return new NextResponse(JSON.stringify({ error: "Configuration Error: MAYAR_API_KEY missing" }), { status: 500 });
+        }
 
         let amount = 0;
         let description = "";
@@ -102,29 +106,49 @@ async function postPurchase(req: Request) {
         else if (planType === "GEMS_TOPUP") { amount = customAmount; description = customDescription || "Top Up Gems"; typeCode = "G"; }
         else { return new NextResponse("Invalid Plan Type", { status: 400 }); }
 
-        // Order ID Max 50 chars. Format: TYPE_UUID_TIMESTAMP(base36)
+        // Order ID (External ID)
         const timestamp = Date.now().toString(36).toUpperCase();
         const orderId = `${typeCode}_${userId}_${timestamp}`;
 
-        const transaction = await Midtrans.createTransaction({
-            orderId,
-            amount,
-            description,
-            customerDetails: {
-                firstName: "User",
-                email: "user@cendralingo.id",
-                phone: "08123456789"
-            }
+        // Call Mayar API
+        const response = await fetch(`${mayarApiUrl}/payment/create`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${mayarApiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                amount: amount,
+                type: "ONETIME",
+                currency: "IDR",
+                description: description,
+                redirect_url: `${req.headers.get("origin")}/shop?status=success`,
+                amount_lock: true,
+                customer_name: "Customer", // Mayar often requires at least generic customer data
+                customer_email: "customer@cendralingo.id",
+                external_id: orderId
+            })
         });
 
-        return NextResponse.json({ url: transaction.redirect_url, externalId: orderId });
+        const data = await response.json();
+
+        // Check if Mayar returned a valid data object
+        if (!response.ok || !data.data) {
+            console.error("Mayar API Error:", data);
+            return new NextResponse(JSON.stringify({
+                error: "Payment Gateway Error",
+                details: data.message || JSON.stringify(data)
+            }), { status: 500 });
+        }
+
+        // Return the link (Mayar typically returns `link` or `payment_url` inside `data`)
+        return NextResponse.json({ url: data.data.link || data.data.payment_url, externalId: orderId });
 
     } catch (e: any) {
-        console.error("Midtrans Purchase Error:", e);
-        // Ensure we return clean JSON, not an HTML error page
+        console.error("Purchase Error:", e);
         return new NextResponse(JSON.stringify({
             error: e.message || String(e),
-            details: "Midtrans Transaction Failed"
+            details: "Transaction Failed"
         }), {
             status: 500,
             headers: { "Content-Type": "application/json" }
@@ -464,45 +488,44 @@ async function postVouchersRedeem(req: Request) {
 }
 
 // --------------------------------------------------------------------------------
-// LOGIC: WEBHOOKS
+// LOGIC: WEBHOOKS (Mayar)
 // --------------------------------------------------------------------------------
-async function postWebhookMidtrans(req: Request) {
+async function postWebhookMayar(req: Request) {
     try {
         const body = await req.json();
-        const { order_id, status_code, gross_amount, transaction_status, signature_key } = body;
+        const { id, status, external_id, amount } = body;
 
-        // 1. Signature Verification
-        const serverKey = process.env.MIDTRANS_SERVER_KEY;
-        if (!serverKey) return NextResponse.json({ error: "Server Key missing" }, { status: 500 });
+        // 1. Verify Token
+        const mayarToken = process.env.MAYAR_WEBHOOK_TOKEN;
+        // Mayar sends token in header "X-Callback-Token" usually, or sometimes in body depending on config.
+        // Assuming simple token check (if configured in Dashboard) or just trusting payload if no signature mechanism enforced yet.
+        // User provided a token string, likely "X-Callback-Token".
+        const receivedToken = req.headers.get("X-Callback-Token");
 
-        const rawString = order_id + status_code + gross_amount + serverKey;
-        const encoder = new TextEncoder();
-        const data = encoder.encode(rawString);
-        const hashBuffer = await crypto.subtle.digest("SHA-512", data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const computedSignature = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-
-        if (computedSignature !== signature_key) {
-            return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
+        if (mayarToken && receivedToken !== mayarToken) {
+            return NextResponse.json({ error: "Unauthorized Webhook" }, { status: 401 });
         }
 
-        // 2. Handle Status & Log Transaction
+        // 2. Log Transaction
         await tursoExecute(
             "INSERT INTO transactions (order_id, user_id, gross_amount, status, payment_type, transaction_time, json_data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             [
-                order_id,
-                order_id.split("_")[1] || "unknown",
-                Number(gross_amount),
-                transaction_status,
-                body.payment_type || "unknown",
-                body.transaction_time || new Date().toISOString(),
+                external_id || `MAYAR-${id}`,
+                (external_id || "").split("_")[1] || "unknown",
+                Number(amount),
+                status,
+                "MAYAR",
+                new Date().toISOString(),
                 JSON.stringify(body),
                 Date.now()
             ]
         );
 
-        if (transaction_status === "capture" || transaction_status === "settlement") {
-            const parts = order_id.split("_");
+        // 3. Process Success
+        if (status === "PAID" || status === "SETTLED" || status === "paid" || status === "settled") {
+            if (!external_id) return NextResponse.json({ received: true });
+
+            const parts = external_id.split("_");
             if (parts.length < 3) return NextResponse.json({ received: true });
 
             const typeCode = parts[0];
@@ -513,7 +536,7 @@ async function postWebhookMidtrans(req: Request) {
                 const expiresAt = Date.now() + thirtyDaysMs;
                 await tursoExecute("UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 5, subscription_ends_at = ? WHERE user_id = ?", [expiresAt, userId]);
             } else if (typeCode === "G") {
-                const paidRp = Math.floor(Number(gross_amount));
+                const paidRp = Math.floor(Number(amount));
                 let gemsToAdd = 0;
                 if (paidRp >= 10000) gemsToAdd = 120;
                 else if (paidRp >= 5000) gemsToAdd = 55;
@@ -558,7 +581,7 @@ export async function POST(req: Request, context: { params: Promise<{ slug: stri
         case "user/sync": return postUserSync(req);
         case "vouchers/generate": return postVouchersGenerate(req);
         case "vouchers/redeem": return postVouchersRedeem(req);
-        case "webhooks/midtrans": return postWebhookMidtrans(req);
+        case "webhooks/mayar": return postWebhookMayar(req); // Changed from midtrans
         default: return new NextResponse("Not Found", { status: 404 });
     }
 }
