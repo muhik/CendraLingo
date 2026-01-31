@@ -320,6 +320,19 @@ async function getUserSync(req: Request) {
         const user = rows[0];
         if (!user) return NextResponse.json({ success: false }, { status: 404 });
 
+        // LOGIC: Auto-Revoke PRO if Expired
+        let hasActiveSubscription = Boolean(user.has_active_subscription);
+        let subscriptionEndsAt = user.subscription_ends_at;
+
+        if (hasActiveSubscription && subscriptionEndsAt) {
+            if (Date.now() > subscriptionEndsAt) {
+                // Expired! Revoke immediately
+                await tursoExecute("UPDATE user_progress SET has_active_subscription = 0, subscription_ends_at = NULL WHERE user_id = ?", [userId]);
+                hasActiveSubscription = false;
+                subscriptionEndsAt = null;
+            }
+        }
+
         // Map snake_case DB columns to camelCase JSON for frontend
         const mappedUser = {
             userId: user.user_id,
@@ -496,7 +509,9 @@ async function postWebhookMidtrans(req: Request) {
             const userId = parts[1];
 
             if (typeCode === "P") {
-                await tursoExecute("UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 5 WHERE user_id = ?", [userId]);
+                const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+                const expiresAt = Date.now() + thirtyDaysMs;
+                await tursoExecute("UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 5, subscription_ends_at = ? WHERE user_id = ?", [expiresAt, userId]);
             } else if (typeCode === "G") {
                 const paidRp = Math.floor(Number(gross_amount));
                 let gemsToAdd = 0;

@@ -91,9 +91,11 @@ export async function POST(req: Request) {
             const amountRp = Number(tx.gross_amount);
 
             if (planType === "JAWARA_PRO" || amountRp >= 49000) {
+                const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+                const expiresAt = Date.now() + thirtyDaysMs;
                 await tursoExecute(dbUrl, dbToken,
-                    "UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 5 WHERE user_id = ?",
-                    [{ type: "text", value: userId }]
+                    "UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 5, subscription_ends_at = ? WHERE user_id = ?",
+                    [{ type: "integer", value: String(expiresAt) }, { type: "text", value: userId }]
                 );
             } else {
                 // Gems Topup

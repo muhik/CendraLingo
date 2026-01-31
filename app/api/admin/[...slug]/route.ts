@@ -247,9 +247,17 @@ async function postUsersUpdate(req: Request) {
         let query = "UPDATE user_progress SET has_active_subscription = ? WHERE user_id = ?";
         let args: any[] = [hasActiveSubscription ? 1 : 0, userId];
 
-        // If Upgrading to PRO (GRANT), Add Bonus & Refill Hearts
+        // If Upgrading to PRO (GRANT)
         if (hasActiveSubscription) {
-            query = "UPDATE user_progress SET has_active_subscription = 1, hearts = 5, points = points + 1000 WHERE user_id = ?";
+            // Set Expiration to 30 Days from now
+            const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+            const expiresAt = Date.now() + thirtyDaysMs;
+
+            query = "UPDATE user_progress SET has_active_subscription = 1, hearts = 5, points = points + 1000, subscription_ends_at = ? WHERE user_id = ?";
+            args = [expiresAt, userId];
+        } else {
+            // If Revoking PRO (Remove access)
+            query = "UPDATE user_progress SET has_active_subscription = 0, subscription_ends_at = NULL WHERE user_id = ?";
             args = [userId];
         }
 
