@@ -27,7 +27,7 @@ export const UserProgress = ({
             <Link href="/shop">
                 <Button variant="ghost" className="text-rose-500">
                     <Heart className="h-4 w-4 mr-2 fill-current" />
-                    {hasActiveSubscription ? <span className="h-4 w-4 flex items-center justify-center font-bold text-lg">∞</span> : hearts}
+                    {hearts}
                 </Button>
             </Link>
         </div>
