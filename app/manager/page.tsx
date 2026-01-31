@@ -29,6 +29,7 @@ interface UserData {
     hearts: number;
     points: number;
     hasActiveSubscription: boolean;
+    subscriptionEndsAt?: string;
     isGuest: boolean;
     isCourseCompleted: boolean;
 }
@@ -1063,9 +1064,16 @@ export default function ManagerPage() {
                                         </td>
                                         <td className="p-4">
                                             {u.hasActiveSubscription ? (
-                                                <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-xs font-bold flex w-fit items-center gap-1">
-                                                    <Trophy className="h-3 w-3" /> PRO
-                                                </span>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-xs font-bold flex w-fit items-center gap-1">
+                                                        <Trophy className="h-3 w-3" /> PRO
+                                                    </span>
+                                                    {u.subscriptionEndsAt && (
+                                                        <span className="text-[10px] text-slate-500 font-mono">
+                                                            Exp: {new Date(Number(u.subscriptionEndsAt)).toLocaleDateString("id-ID")}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <span className="bg-slate-100 text-slate-500 px-2 py-1 rounded-full text-xs font-bold">
                                                     FREE

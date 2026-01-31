@@ -119,6 +119,7 @@ async function getUsers() {
             points: u.points,
             isCourseCompleted: Boolean(u.is_course_completed),
             hasActiveSubscription: Boolean(u.has_active_subscription),
+            subscriptionEndsAt: u.subscription_ends_at,
             isGuest: Boolean(u.is_guest),
             cashbackBalance: u.cashback_balance || 0
         }));
