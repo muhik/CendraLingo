@@ -434,7 +434,7 @@ function ShopContent() {
                                     <div>
                                         <h3 className="font-bold text-white text-lg">Metode Pembayaran</h3>
                                         <p className="text-white/70 text-sm">
-                                            {useManualPayment ? "Transfer Manual (BCA / QRIS)" : "Otomatis (Midtrans)"}
+                                            {useManualPayment ? "Transfer Manual (BCA / QRIS)" : "Otomatis"}
                                         </p>
                                     </div>
                                 </div>
@@ -474,8 +474,8 @@ function ShopContent() {
                                         </h2>
                                         <p className="text-slate-600 font-medium">
                                             {hasActiveSubscription
-                                                ? "Status Aktif! Nikmati +1000 Gems & +100 Hearts/Bulan. ⚡"
-                                                : "Dapat 1000 Gems + 100 Hearts, Tanpa Iklan, Akses Prioritas."}
+                                                ? "Status Aktif! Nikmati +1000 Gems & +5 Hearts/Bulan. ⚡"
+                                                : "Dapat 1000 Gems + 5 Hearts, Tanpa Iklan, Akses Prioritas."}
                                         </p>
                                     </div>
                                 </div>
