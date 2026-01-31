@@ -225,7 +225,7 @@ function ShopContent() {
                 // Redirect to Midtrans
                 window.location.href = data.url;
             } else {
-                const errMsg = data.error || "Pembayaran gagal";
+                const errMsg = data.details || data.error || "Pembayaran gagal";
                 console.error("Payment API Error:", errMsg);
                 toast.error(errMsg);
                 setIsProcessing(false);
