@@ -243,7 +243,17 @@ async function postUsersUpdate(req: Request) {
     try {
         const body = await req.json();
         const { userId, hasActiveSubscription } = body;
-        await tursoExecute("UPDATE user_progress SET has_active_subscription = ? WHERE user_id = ?", [hasActiveSubscription ? 1 : 0, userId]);
+
+        let query = "UPDATE user_progress SET has_active_subscription = ? WHERE user_id = ?";
+        let args: any[] = [hasActiveSubscription ? 1 : 0, userId];
+
+        // If Upgrading to PRO (GRANT), Add Bonus & Refill Hearts
+        if (hasActiveSubscription) {
+            query = "UPDATE user_progress SET has_active_subscription = 1, hearts = 5, points = points + 1000 WHERE user_id = ?";
+            args = [userId];
+        }
+
+        await tursoExecute(query, args);
         return NextResponse.json({ success: true });
     } catch (e) {
         return NextResponse.json({ error: String(e) }, { status: 500 });
