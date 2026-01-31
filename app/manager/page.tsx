@@ -1074,8 +1074,8 @@ export default function ManagerPage() {
                                         </td>
                                         <td className="p-4">
                                             {u.isCourseCompleted ? (
-                                                <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold flex w-fit items-center gap-1 animate-pulse">
-                                                    🏆 SELESAI
+                                                <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-xs font-bold flex w-fit items-center gap-1 animate-pulse border border-amber-200">
+                                                    🚧 MENUNGGU UPDATE
                                                 </span>
                                             ) : (
                                                 <span className="bg-slate-50 text-slate-400 px-2 py-1 rounded-full text-xs">

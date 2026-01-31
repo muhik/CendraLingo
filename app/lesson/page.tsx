@@ -1,4 +1,6 @@
 "use client";
+// Force Refresh Mechanism
+
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { Header } from "@/components/lesson/header";
@@ -85,12 +87,23 @@ function LessonContent() {
     const lastLessonOfCourse = lastUnit.lessons[lastUnit.lessons.length - 1];
     const isCourseFinished = lastLessonOfCourse.id === lessonId;
 
-    // AUTO NOTIFICATION TRIGGER
+    // AUTO NOTIFICATION TRIGGER & REDIRECT
     useEffect(() => {
         if (completed && isCourseFinished && !isCourseCompleted) {
-            completeCourse(); // Fire and forget
+            completeCourse(); // Fire and forget notification
+
+            // Redirect to /learn after short delay
+            setTimeout(() => {
+                toast.success("Laporan Terkirim! Kembali ke Peta...");
+                router.push("/learn");
+            }, 2000);
+        } else if (completed && isCourseFinished && isCourseCompleted) {
+            // If already completed (replay), still redirect
+            setTimeout(() => {
+                router.push("/learn");
+            }, 2000);
         }
-    }, [completed, isCourseFinished, isCourseCompleted, completeCourse]);
+    }, [completed, isCourseFinished, isCourseCompleted, completeCourse, router]);
 
 
 
@@ -291,8 +304,6 @@ function LessonContent() {
         const speedBonus = timeTaken < 120000 ? 5 : 0;
         const totalEarned = baseReward + accuracyBonus + speedBonus;
 
-
-
         return (
             <div className="flex flex-col h-screen items-center justify-center p-6 bg-white animate-in fade-in duration-500">
                 <div className="flex-1 flex flex-col items-center justify-center w-full max-w-sm gap-y-8">
@@ -371,50 +382,44 @@ function LessonContent() {
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* MANAGER NOTIFICATION LOGIC (AUTO) */}
-                {isCourseFinished && (
-                    <div className="w-full max-w-sm mt-8 border-t-2 border-slate-100 pt-8 animate-in fade-in zoom-in duration-500 delay-300">
-                        <div className="flex flex-col items-center gap-4">
-                            <div className="bg-slate-100 p-6 rounded-2xl border-2 border-slate-200 w-full text-center shadow-sm">
-                                <Loader2 className="h-10 w-10 text-purple-500 animate-spin mx-auto mb-4" />
-                                <h3 className="text-lg font-bold text-slate-700 mb-2">Menunggu Manager...</h3>
-                                <p className="text-sm text-slate-500 leading-relaxed">
-                                    Laporan kemenanganmu sedang dikirim otomatis. <br />
-                                    Mohon tunggu, Manager sedang menyiapkan materi Level Selanjutnya untukmu.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-slate-400 font-mono bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
-                                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                                Auto-Signal Sent to /manager
+                    {/* MANAGER NOTIFICATION LOGIC (AUTO & REDIRECT) */}
+                    {isCourseFinished && (
+                        <div className="w-full max-w-sm mt-8 border-t-2 border-slate-100 pt-8 animate-in fade-in zoom-in duration-500 delay-300">
+                            <div className="flex flex-col items-center gap-4">
+                                <div className="bg-slate-100 p-6 rounded-2xl border-2 border-slate-200 w-full text-center shadow-sm">
+                                    <Loader2 className="h-10 w-10 text-purple-500 animate-spin mx-auto mb-4" />
+                                    <h3 className="text-lg font-bold text-slate-700 mb-2">Laporan Terkirim! 🚀</h3>
+                                    <p className="text-sm text-slate-500 leading-relaxed">
+                                        Mengarahkanmu kembali ke Peta Belajar...
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* NORMAL FLOW (NOT FINISHED) */}
-                {!isCourseFinished && (
-                    <div className="w-full max-w-sm mt-8 border-t-2 border-slate-100 pt-8">
-                        <Button
-                            size="lg"
-                            className="w-full font-bold text-lg h-12 uppercase tracking-wide"
-                            onClick={() => {
-                                if (isGuest) {
-                                    setShowAuthModal(true);
-                                } else {
-                                    router.push("/learn");
-                                }
-                            }}
-                        >
-                            Lanjutkan
-                        </Button>
-                    </div>
-                )}
+                    {/* NORMAL FLOW (NOT FINISHED) */}
+                    {!isCourseFinished && (
+                        <div className="w-full max-w-sm mt-8 border-t-2 border-slate-100 pt-8">
+                            <Button
+                                size="lg"
+                                className="w-full font-bold text-lg h-12 uppercase tracking-wide"
+                                onClick={() => {
+                                    if (isGuest) {
+                                        setShowAuthModal(true);
+                                    } else {
+                                        router.push("/learn");
+                                    }
+                                }}
+                            >
+                                Lanjutkan
+                            </Button>
+                        </div>
+                    )}
+                </div>
             </div>
         );
     }
-
     return (
         <div className="flex flex-col h-screen overflow-hidden">
             <AuthModal open={showAuthModal} setOpen={setShowAuthModal} onSuccess={() => router.push("/learn")} preventClose={isGuest} />

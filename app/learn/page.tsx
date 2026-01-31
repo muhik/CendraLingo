@@ -131,55 +131,90 @@ export default function LearnPage() {
                                 </div>
                             </div>
                         ) : (
-                            curriculumData
-                                .filter(unit => activeSection.unitIds.includes(unit.id))
-                                .map((unit) => {
-                                    const isUnitCompleted = unit.lessons.every((lesson) => completedLessons.includes(lesson.id));
-                                    const isUnitLocked = !isUnitCompleted && !unit.lessons.some((lesson) =>
-                                        !completedLessons.includes(lesson.id) && (lesson.id === 1 || completedLessons.includes(lesson.id - 1))
-                                    );
-                                    const isUnitActive = !isUnitCompleted && !isUnitLocked;
+                            <>
+                                <div className="space-y-4">
+                                    {activeSection.unitIds.map((unitId) => {
+                                        const unit = curriculumData.find(u => u.id === unitId);
+                                        if (!unit) return null;
 
-                                    return (
-                                        <div key={unit.id} className="mb-10 w-full relative animate-in slide-in-from-right duration-500">
-                                            <UnitHeader
-                                                title={unit.title}
-                                                description={unit.description}
-                                                isActive={isUnitActive}
-                                                isCompleted={isUnitCompleted}
-                                                isLocked={isUnitLocked}
-                                            />
+                                        const isUnitCompleted = unit.lessons.every((lesson) => completedLessons.includes(lesson.id));
+                                        const isUnitLocked = !isUnitCompleted && !unit.lessons.some((lesson) =>
+                                            !completedLessons.includes(lesson.id) && (lesson.id === 1 || completedLessons.includes(lesson.id - 1))
+                                        );
+                                        const isUnitActive = !isUnitCompleted && !isUnitLocked;
 
-                                            <div className="flex flex-col items-center relative gap-4">
-                                                <UnitPathSvg lessons={unit.lessons} />
+                                        return (
+                                            <div key={unit.id} className="mb-8">
+                                                <UnitHeader
+                                                    title={unit.title}
+                                                    description={unit.description}
+                                                    isActive={isUnitActive}
+                                                    isCompleted={isUnitCompleted}
+                                                    isLocked={isUnitLocked}
+                                                />
 
-                                                {unit.lessons.map((lesson, index) => {
-                                                    const isCompleted = completedLessons.includes(lesson.id);
-                                                    const isFormattedCurrent = index === 0 ? (!isCompleted && unit.id === 1) : (completedLessons.includes(unit.lessons[index - 1].id) && !isCompleted);
-                                                    // Fix for "Current" logic across units:
-                                                    // Ideally need global current lesson check.
-                                                    // Simplified: If locked, it's locked.
-                                                    const isLocked = !isCompleted && !isFormattedCurrent;
+                                                <div className="flex flex-col items-center relative mt-8 mb-16">
+                                                    {/* Render Path SVG Layer */}
+                                                    <div className="absolute inset-0 pointer-events-none z-0 mt-8">
+                                                        <UnitPathSvg
+                                                            lessons={unit.lessons}
+                                                        />
+                                                    </div>
 
-                                                    return (
-                                                        <div key={lesson.id} className="relative z-10">
-                                                            <LessonButton
-                                                                id={lesson.id}
-                                                                index={index}
-                                                                totalCount={unit.lessons.length}
-                                                                current={isFormattedCurrent}
-                                                                locked={isLocked}
-                                                                percentage={isFormattedCurrent ? 0 : isCompleted ? 100 : 0}
-                                                                type={lesson.type}
-                                                                onClick={handleLessonStart}
-                                                            />
-                                                        </div>
-                                                    );
-                                                })}
+                                                    {/* Render Lessons */}
+                                                    {unit.lessons.map((lesson, index) => {
+                                                        const isCompleted = completedLessons.includes(lesson.id);
+                                                        const isFormattedCurrent = index === 0 ? (!isCompleted && unit.id === 1) : (completedLessons.includes(unit.lessons[index - 1].id) && !isCompleted);
+                                                        const isLocked = !isCompleted && !isFormattedCurrent;
+
+                                                        // Calculate offset for winding path (Sin wave)
+                                                        // Amplitude 80px, Frequency derived from index
+                                                        const rightOffset = Math.sin(index * 0.8) * 80;
+
+                                                        return (
+                                                            <div key={lesson.id}
+                                                                className="relative z-10 mb-8 transition-transform hover:scale-105"
+                                                                style={{ transform: `translateX(${rightOffset}px)` }}
+                                                            >
+                                                                <LessonButton
+                                                                    id={lesson.id}
+                                                                    index={index}
+                                                                    totalCount={unit.lessons.length}
+                                                                    current={isFormattedCurrent}
+                                                                    locked={isLocked}
+                                                                    percentage={isCompleted ? 100 : 0}
+                                                                    onClick={(id) => handleLessonStart(id, isCompleted, index === unit.lessons.length - 1)}
+                                                                />
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* UNIT 11: UNDER CONSTRUCTION (PHANTOM) */}
+                                <div className="w-full mt-12 mb-20 animate-in fade-in duration-700">
+                                    <div className="bg-amber-100 border-4 border-amber-300 border-dashed rounded-xl p-6 relative overflow-hidden">
+                                        {/* Construction Tape Effect */}
+                                        <div className="absolute top-0 left-0 w-full h-4 bg-stripes-black-yellow opacity-20"></div>
+                                        <div className="absolute bottom-0 left-0 w-full h-4 bg-stripes-black-yellow opacity-20"></div>
+
+                                        <div className="flex flex-col items-center text-center relative z-10">
+                                            <div className="bg-amber-400 p-3 rounded-full mb-3 shadow-md">
+                                                <BookOpen className="h-8 w-8 text-amber-900" />
+                                            </div>
+                                            <h3 className="text-xl font-black text-amber-800 uppercase tracking-wide mb-1">
+                                                Unit 11: Under Construction
+                                            </h3>
+                                            <p className="text-sm font-bold text-amber-700/80 max-w-[280px]">
+                                                Materi baru sedang disiapkan Manager. Silakan refresh secara berkala! 🚧
+                                            </p>
                                         </div>
-                                    )
-                                })
+                                    </div>
+                                </div>
+                            </>
                         )}
                     </div>
 
