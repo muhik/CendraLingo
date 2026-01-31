@@ -85,10 +85,9 @@ export const useUserProgress = create<UserProgressState>()(
                 get().syncWithDb();
             },
             reduceHeart: () => {
-                const { hearts } = get(); // Removed hasActiveSubscription check to allow hearts to decrease
+                const { hearts } = get();
                 if (hearts <= 0) return;
                 set({ hearts: Math.max(0, hearts - 1) });
-                // We don't sync on every heart reduction to save bandwidth, maybe on lesson completion
             },
 
             refillHearts: () => {
