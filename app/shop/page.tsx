@@ -261,7 +261,7 @@ function ShopContent() {
 
             const data = await res.json();
             if (data.success) {
-                toast.success("Konfirmasi Terkirim! Mohon tunggu verifikasi Admin (max 24 jam).");
+                toast.success("Konfirmasi Terkirim! Mohon tunggu verifikasi Admin (Secepatnya).");
                 setShowManualModal(false);
             } else {
                 toast.error("Gagal mengirim konfirmasi: " + data.error);
@@ -456,7 +456,7 @@ function ShopContent() {
                             </div>
                             {useManualPayment && (
                                 <div className="mt-2 text-xs text-amber-300 text-center animate-pulse">
-                                    * Metode manual membutuhkan verifikasi Admin (Max 24 jam).
+                                    * Metode manual membutuhkan verifikasi Admin (Secepatnya).
                                 </div>
                             )}
                         </div>
