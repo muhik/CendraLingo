@@ -128,8 +128,9 @@ async function postPurchase(req: Request) {
                 description: description,
                 redirect_url: `${req.headers.get("origin")}/shop?status=success`,
                 amount_lock: true,
-                customer_name: "Customer", // Mayar often requires at least generic customer data
-                customer_email: "customer@cendralingo.id",
+                name: "Customer CendraLingo", // Changed from customer_name
+                email: "customer@cendralingo.id", // Changed from customer_email
+                mobile: "08123456789", // Added required field
                 external_id: orderId
             })
         });
