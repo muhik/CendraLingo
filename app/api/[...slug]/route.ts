@@ -91,12 +91,8 @@ async function postPurchase(req: Request) {
         const { userId, planType, customAmount, customDescription } = body;
         if (!userId) return new NextResponse("User ID required", { status: 400 });
 
-        // Fallback to hardcoded key if env is missing
-        // const mayarApiKey = process.env.MAYAR_API_KEY || "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJkNzUxMjViOS1mNTBjLTQ1MDktODUyMC0wNjUzYzY5NTkzOWYiLCJhY2NvdW50SWQiOiIyODNiODZiMS1hYWJkLTRlODctYjcxMy0zM2E0ZDZiODE0ZmUiLCJjcmVhdGVkQXQiOiIxNzY5ODY0OTQxNDIxIiwicm9sZSI6ImRldmVsb3BlciIsInN1YiI6Im11aGlrbXVAZ21haWwuY29tIiwibmFtZSI6IkNlbmRyYSBMaW5nbyIsImxpbmsiOiJtdWhpay1tdS05Njg4NSIsImlzU2VsZkRvbWFpbiI6bnVsbCwiaWF0IjoxNzY5ODY0OTQxfQ.DHhYqw9CFVo72PzeuqyeS7OmrnnWZjRvhc3qzLmf_WDjXPWgHppemx0ygDvDn7fZgoEWkNaCC-Wvlo6LdQyznGOmkrZ1zEvvxNAt_AQlEe7d3po4OqHtqa1PzTU_SYV2B-bhEV9BD4YZC9i3PWgELiZN9kG5ToZ6cDQsB_DbVUh5jqIZL9yk_-lHPk4HpGoOyCXHwgkWqOeNGNylrkGRsqMIYmmsKMVR71WHOitdLD2TB16n7hnDgLUkD4NEmnQXgag9yd_STBCLGtiOYBZXylsSxT61ZLApuAGjI4DdSzOF973oX5b3mYBztoK4-7RUUALXFgQrR29Da2FOSVl5Sw";
-        const mayarApiKey = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJkNzUxMjViOS1mNTBjLTQ1MDktODUyMC0wNjUzYzY5NTkzOWYiLCJhY2NvdW50SWQiOiIyODNiODZiMS1hYWJkLTRlODctYjcxMy0zM2E0ZDZiODE0ZmUiLCJjcmVhdGVkQXQiOiIxNzY5ODY0OTQxNDIxIiwicm9sZSI6ImRldmVsb3BlciIsInN1YiI6Im11aGlrbXVAZ21haWwuY29tIiwibmFtZSI6IkNlbmRyYSBMaW5nbyIsImxpbmsiOiJtdWhpay1tdS05Njg4NSIsImlzU2VsZkRvbWFpbiI6bnVsbCwiaWF0IjoxNzY5ODY0OTQxfQ.DHhYqw9CFVo72PzeuqyeS7OmrnnWZjRvhc3qzLmf_WDjXPWgHppemx0ygDvDn7fZgoEWkNaCC-Wvlo6LdQyznGOmkrZ1zEvvxNAt_AQlEe7d3po4OqHtqa1PzTU_SYV2B-bhEV9BD4YZC9i3PWgELiZN9kG5ToZ6cDQsB_DbVUh5jqIZL9yk_-lHPk4HpGoOyCXHwgkWqOeNGNylrkGRsqMIYmmsKMVR71WHOitdLD2TB16n7hnDgLUkD4NEmnQXgag9yd_STBCLGtiOYBZXylsSxT61ZLApuAGjI4DdSzOF973oX5b3mYBztoK4-7RUUALXFgQrR29Da2FOSVl5Sw";
-
-        // FIX: USER IS USING SANDBOX KEY (.club), SO WE MUST USE SANDBOX URL
-        const mayarApiUrl = "https://api.mayar.club/hl/v1";
+        const mayarApiKey = process.env.MAYAR_API_KEY;
+        const mayarApiUrl = "https://api.mayar.id/hl/v1"; // PRODUCTION URL
 
         if (!mayarApiKey) {
             return new NextResponse(JSON.stringify({ error: "Configuration Error: MAYAR_API_KEY missing" }), { status: 500 });
@@ -126,7 +122,7 @@ async function postPurchase(req: Request) {
                 type: "ONETIME",
                 currency: "IDR",
                 description: description,
-                redirect_url: `${req.headers.get("origin")}/shop?status=success`,
+                redirect_url: "https://cendralingo.my.id/shop?status=success", // Force absolute URL for reliability
                 amount_lock: true,
                 name: "Customer CendraLingo", // Changed from customer_name
                 email: "customer@cendralingo.id", // Changed from customer_email
@@ -508,8 +504,7 @@ async function postWebhookMayar(req: Request) {
         const receivedToken = req.headers.get("X-Callback-Token");
 
         if (mayarToken && receivedToken !== mayarToken) {
-            // return NextResponse.json({ error: "Unauthorized Webhook" }, { status: 401 });
-            console.warn("Webhook Token Mismatch (Ignored for Debugging)", receivedToken, mayarToken);
+            return NextResponse.json({ error: "Unauthorized Webhook" }, { status: 401 });
         }
 
         // 2. Log Transaction
