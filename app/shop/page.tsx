@@ -491,36 +491,7 @@ function ShopContent() {
                             </div>
                         </div>
 
-                        {/* ITEMS GRID */}
-                        <div>
-                            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                <Heart className="text-rose-500 fill-rose-500" /> Power-Ups
-                            </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <ShopItem
-                                    name="Refill Hearts"
-                                    description="Isi ulang nyawa penuh supaya bisa belajar terus."
-                                    Icon={Heart}
-                                    iconColor="text-rose-500 fill-rose-500"
-                                    price={200}
-                                    points={points}
-                                    hasActive={false} // Allow buying even if full
-                                    activeTitle="ISI NYAWA (+5)"
-                                    onBuy={handleRefillHearts}
-                                />
-                                <ShopItem
-                                    name="Streak Freeze"
-                                    description="Jaga streak-mu tetap aman meskipun absen sehari."
-                                    Icon={Flame}
-                                    iconColor="text-orange-500 fill-orange-500"
-                                    price={2000}
-                                    points={points}
-                                    hasActive={false} // Allow buying even if full
-                                    activeTitle="BEKU SIHIR"
-                                    onBuy={handleBuyFreeze}
-                                />
-                            </div>
-                        </div>
+
                     </div>
 
 
