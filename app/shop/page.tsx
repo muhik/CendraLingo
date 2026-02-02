@@ -521,62 +521,63 @@ function ShopContent() {
                                 />
                             </div>
                         </div>
+                    </div>
 
 
 
-                        {/* GEMS GRID */}
-                        <div>
-                            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                <Gem className="text-sky-500 fill-sky-500" /> Top Up Gems
-                            </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <ShopItem
-                                    name="Segenggam Gems"
-                                    description="10 Gems"
-                                    Icon={Gem}
-                                    iconColor="text-sky-400 fill-sky-400"
-                                    price={0}
-                                    priceText="Rp 1.000"
-                                    points={points}
-                                    hasActive={false}
-                                    onBuy={() => handleBuyGems(10, "Rp 1.000")}
-                                />
-                                <ShopItem
-                                    name="Karung Gems"
-                                    description="55 Gems"
-                                    Icon={Gem}
-                                    iconColor="text-sky-500 fill-sky-500"
-                                    price={0}
-                                    priceText="Rp 5.000"
-                                    points={points}
-                                    hasActive={false}
-                                    onBuy={() => handleBuyGems(55, "Rp 5.000")}
-                                    isPopular
-                                />
-                                <ShopItem
-                                    name="Peti Harta"
-                                    description="120 Gems"
-                                    Icon={Gem}
-                                    iconColor="text-indigo-500 fill-indigo-500"
-                                    price={0}
-                                    priceText="Rp 10.000"
-                                    points={points}
-                                    hasActive={false}
-                                    onBuy={() => handleBuyGems(120, "Rp 10.000")}
-                                />
-                            </div>
+                    {/* GEMS GRID */}
+                    <div>
+                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                            <Gem className="text-sky-500 fill-sky-500" /> Top Up Gems
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <ShopItem
+                                name="Segenggam Gems"
+                                description="10 Gems"
+                                Icon={Gem}
+                                iconColor="text-sky-400 fill-sky-400"
+                                price={0}
+                                priceText="Rp 1.000"
+                                points={points}
+                                hasActive={false}
+                                onBuy={() => handleBuyGems(10, "Rp 1.000")}
+                            />
+                            <ShopItem
+                                name="Karung Gems"
+                                description="55 Gems"
+                                Icon={Gem}
+                                iconColor="text-sky-500 fill-sky-500"
+                                price={0}
+                                priceText="Rp 5.000"
+                                points={points}
+                                hasActive={false}
+                                onBuy={() => handleBuyGems(55, "Rp 5.000")}
+                                isPopular
+                            />
+                            <ShopItem
+                                name="Peti Harta"
+                                description="120 Gems"
+                                Icon={Gem}
+                                iconColor="text-indigo-500 fill-indigo-500"
+                                price={0}
+                                priceText="Rp 10.000"
+                                points={points}
+                                hasActive={false}
+                                onBuy={() => handleBuyGems(120, "Rp 10.000")}
+                            />
                         </div>
                     </div>
                 </div>
             </div>
-            );
+        </div>
+    );
 
 }
 
-            export default function ShopPage() {
+export default function ShopPage() {
     return (
-            <Suspense fallback={<div className="min-h-screen bg-[#022c22] flex items-center justify-center text-white">Loading Shop...</div>}>
-                <ShopContent />
-            </Suspense>
-            );
+        <Suspense fallback={<div className="min-h-screen bg-[#022c22] flex items-center justify-center text-white">Loading Shop...</div>}>
+            <ShopContent />
+        </Suspense>
+    );
 }
