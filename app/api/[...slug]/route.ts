@@ -552,6 +552,40 @@ async function postWebhookMayar(req: Request) {
 }
 
 // --------------------------------------------------------------------------------
+// LOGIC: TRANSACTIONS (Admin)
+// --------------------------------------------------------------------------------
+async function getTransactions(req: Request) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const page = parseInt(searchParams.get("page") || "1");
+        const limit = 10;
+        const offset = (page - 1) * limit;
+
+        const countRes = await tursoQuery("SELECT COUNT(*) as total FROM transactions");
+        const total = countRes[0]?.total || 0;
+        const totalPages = Math.ceil(total / limit);
+
+        const rows = await tursoQuery(
+            "SELECT * FROM transactions ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            [limit, offset]
+        );
+
+        return NextResponse.json({
+            success: true,
+            data: rows,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages
+            }
+        });
+    } catch (e) {
+        return NextResponse.json({ error: String(e) }, { status: 500 });
+    }
+}
+
+// --------------------------------------------------------------------------------
 // DISPATCHER
 // --------------------------------------------------------------------------------
 export async function GET(req: Request, context: { params: Promise<{ slug: string[] }> }) {
@@ -559,6 +593,7 @@ export async function GET(req: Request, context: { params: Promise<{ slug: strin
     const path = slug.join("/");
     switch (path) {
         case "ads": return getAds();
+        case "admin/transactions": return getTransactions(req); // Added
         case "redeem/status": return getRedeemStatus(req);
         case "treasure/access": return getTreasureAccess(req);
         case "user/sync": return getUserSync(req);
@@ -573,6 +608,7 @@ export async function POST(req: Request, context: { params: Promise<{ slug: stri
     switch (path) {
         case "ads": return getAds(); // Also support ads (get) for cleaner URL
         case "ads/manage": return postAdsManage(req);
+        case "admin/manual-approve": return postManualApprove(req); // Ensure this exists or add if missing
         case "feedback": return postFeedback(req);
         case "purchase": return postPurchase(req);
         case "redeem/request": return postRedeemRequest(req);
