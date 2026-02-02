@@ -33,7 +33,21 @@ function ShopContent() {
     useEffect(() => {
         setIsMounted(true);
         refreshUserData(); // Fetch latest data from DB (including cash back)
-    }, [refreshUserData]);
+
+        // Handle Payment Success Redirect
+        const status = searchParams.get("status");
+        if (status === "success") {
+            toast.success("Pembayaran Berhasil! Memuat data terbaru...", { duration: 4000 });
+            // Remove query param to prevent toast on refresh
+            window.history.replaceState(null, "", window.location.pathname);
+
+            // Force refresh again after a delay to ensure webhook processed
+            setTimeout(() => {
+                refreshUserData();
+                toast.success("Gems & Status Diperbarui! 💎");
+            }, 2000);
+        }
+    }, [refreshUserData, searchParams]);
 
     // Pending purchase to resume after login
     const [pendingPurchase, setPendingPurchase] = useState<{ amount: number, price: string } | null>(null);
