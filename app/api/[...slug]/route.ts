@@ -123,6 +123,7 @@ async function postPurchase(req: Request) {
                 currency: "IDR",
                 description: description,
                 redirect_url: "https://cendralingo.my.id/shop?status=success", // Force absolute URL for reliability
+                mobile_return_url: "https://cendralingo.my.id/shop?status=success", // Fallback for mobile/some environments
                 amount_lock: true,
                 name: "Customer CendraLingo", // Changed from customer_name
                 email: "customer@cendralingo.id", // Changed from customer_email
