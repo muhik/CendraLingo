@@ -130,7 +130,7 @@ async function postPurchase(req: Request) {
                 mobile_return_url: "https://cendralingo.my.id/shop?status=success",
                 amount_lock: true,
                 name: `User ${userId.substring(0, 8)}`,
-                email: `u_${userId.substring(0, 30)}@cendralingo.id`,
+                email: `u_${userId.substring(0, 8)}_${Math.random().toString(36).substring(2, 7)}@cendralingo.id`, // Unique Email per Tx stuck to < 55 chars
                 mobile: `0812${Math.floor(10000000 + Math.random() * 90000000)}`,
                 // external_id: orderId // REMOVED
             })
