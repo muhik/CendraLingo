@@ -108,7 +108,8 @@ async function postPurchase(req: Request) {
 
         // Order ID (External ID)
         const timestamp = Date.now().toString(36).toUpperCase();
-        const orderId = `${typeCode}_${userId}_${timestamp}`;
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        const orderId = `${typeCode}_${userId}_${timestamp}${random}`;
 
         // Call Mayar API
         const response = await fetch(`${mayarApiUrl}/payment/create`, {
