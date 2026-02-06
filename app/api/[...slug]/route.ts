@@ -129,8 +129,8 @@ async function postPurchase(req: Request) {
                 redirect_url: "https://cendralingo.my.id/shop?status=success",
                 mobile_return_url: "https://cendralingo.my.id/shop?status=success",
                 amount_lock: true,
-                name: "Customer CendraLingo",
-                email: "customer@cendralingo.id",
+                name: `User ${userId.substring(0, 8)}`, // Unique Name to avoid collision
+                email: `user_${userId}@cendralingo.id`, // Unique Email to avoid collision
                 mobile: "08123456789",
                 external_id: orderId
             })
