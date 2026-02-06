@@ -116,27 +116,32 @@ async function postPurchase(req: Request) {
         const uniqueId = generateUUID();
         const orderId = `ORD-${uniqueId}`;
 
-        // Call Mayar API
-        const response = await fetch(`${mayarApiUrl}/payment/create`, {
+        // Call Mayar API - Create Invoice (Not Product Link) to allow duplicates
+        const response = await fetch(`${mayarApiUrl}/invoice/create`, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${mayarApiKey}`,
-                "Content-Type": "application/json",
-                // "Idempotency-Key": uniqueId // REMOVED: Causing 409 Conflicts
+                "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                amount: amount,
-                type: "ONETIME",
-                currency: "IDR",
+                amount: amount, // Total Amount
                 description: `${description} [Ref: ${uniqueId.substring(0, 8)}]`,
-                // external_id: uniqueId, // REMOVED: Causing 409 Conflicts
-                metadata: { userId: userId, type: typeCode, orderId: orderId },
-                redirect_url: "https://cendralingo.my.id/shop?status=success",
-                mobile_return_url: "https://cendralingo.my.id/shop?status=success",
-                amount_lock: true,
-                name: `User ${userId.substring(0, 8)} ${Math.floor(Math.random() * 1000)}`,
-                email: `u_${userId.substring(0, 8)}_${Math.random().toString(36).substring(2, 7)}@cendralingo.id`,
-                mobile: `0812${Math.floor(10000000 + Math.random() * 90000000)}`
+                items: [
+                    {
+                        name: description,
+                        quantity: 1,
+                        price: amount,
+                        description: `Transaction for ${description}`
+                    }
+                ],
+                customer: {
+                    name: `User ${userId.substring(0, 8)} ${Math.floor(Math.random() * 1000)}`,
+                    email: `u_${userId.substring(0, 8)}_${Math.random().toString(36).substring(2, 7)}@cendralingo.id`,
+                    mobile: `0812${Math.floor(10000000 + Math.random() * 90000000)}`
+                },
+                redirectUrl: "https://cendralingo.my.id/shop?status=success", // Note camelCase for Invoice API typically
+                redirect_url: "https://cendralingo.my.id/shop?status=success", // Fallback snake_case
+                metadata: { userId: userId, type: typeCode, orderId: orderId }
             })
         });
 
