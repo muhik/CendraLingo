@@ -122,7 +122,7 @@ async function postPurchase(req: Request) {
                 amount: amount,
                 type: "ONETIME",
                 currency: "IDR",
-                description: description,
+                description: `${description} (Ref: ${random})`, // Unique Description to bypass Deduplication
                 externalId: orderId,
                 metadata: { userId: userId, type: typeCode, orderId: orderId }, // ✅ ROBUST WAY: Pass Checkpoint Data via Metadata
                 redirect_url: "https://cendralingo.my.id/shop?status=success",
