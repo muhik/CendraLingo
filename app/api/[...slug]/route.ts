@@ -107,9 +107,10 @@ async function postPurchase(req: Request) {
         else { return new NextResponse("Invalid Plan Type", { status: 400 }); }
 
         // Order ID (External ID)
+        // Order ID (External ID) - Short & Random to fix 409 Conflict
         const timestamp = Date.now().toString(36).toUpperCase();
-        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-        const orderId = `${typeCode}_${userId}_${timestamp}${random}`;
+        const random = Math.floor(Math.random() * 100000).toString(36).toUpperCase();
+        const orderId = `ORD-${timestamp}-${random}`;
 
         // Call Mayar API
         const response = await fetch(`${mayarApiUrl}/payment/create`, {
