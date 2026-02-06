@@ -494,8 +494,17 @@ async function postVouchersRedeem(req: Request) {
 // --------------------------------------------------------------------------------
 async function postWebhookMayar(req: Request) {
     try {
-        const body = await req.json();
+        let body: any = {};
+        try {
+            const text = await req.text();
+            if (text) body = JSON.parse(text);
+        } catch (e) {
+            console.warn("Webhook Body Parse Error (Non-JSON?):", e);
+        }
+
         const { id, status, external_id, amount } = body;
+
+        console.log("Mayar Webhook Received:", { id, status, external_id });
 
         // 1. Verify Token (Relaxed for Troubleshooting)
         const mayarToken = process.env.MAYAR_WEBHOOK_TOKEN;
@@ -503,53 +512,66 @@ async function postWebhookMayar(req: Request) {
 
         if (mayarToken && receivedToken !== mayarToken) {
             console.warn(`Webhook Token Mismatch: Received ${receivedToken} vs Expected ${mayarToken}`);
-            // Proceed anyway to ensure transaction is logged
+            // Proceed anyway
         }
 
-        // 2. Log Transaction
+        // 2. Log Transaction (Safe Mode)
         const safeExternalId = external_id || `MAYAR-${id || Date.now()}`;
 
-        await tursoExecute(
-            "INSERT INTO transactions (order_id, user_id, gross_amount, status, payment_type, transaction_time, json_data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            [
-                safeExternalId,
-                (safeExternalId).split("_")[1] || "unknown",
-                Number(amount || 0),
-                status || "unknown",
-                "MAYAR",
-                new Date().toISOString(),
-                JSON.stringify(body),
-                Date.now()
-            ]
-        );
+        try {
+            await tursoExecute(
+                "INSERT INTO transactions (order_id, user_id, gross_amount, status, payment_type, transaction_time, json_data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(order_id) DO UPDATE SET status=excluded.status",
+                [
+                    safeExternalId,
+                    (safeExternalId).split("_")[1] || "unknown",
+                    Number(amount || 0),
+                    status || "unknown",
+                    "MAYAR",
+                    new Date().toISOString(),
+                    JSON.stringify(body),
+                    Date.now()
+                ]
+            );
+        } catch (dbError) {
+            console.error("Webhook DB Insert Error (Ignored to keep 200 OK):", dbError);
+        }
 
         // 3. Process Success
-        if (status === "PAID" || status === "SETTLED" || status === "paid" || status === "settled") {
-            if (!external_id) return NextResponse.json({ received: true });
+        if (status && ["PAID", "SETTLED", "paid", "settled"].includes(status.toUpperCase())) {
+            try {
+                if (safeExternalId) {
+                    const parts = safeExternalId.split("_");
+                    if (parts.length >= 2) {
+                        const typeCode = parts[0];
+                        const userId = parts[1];
 
-            const parts = external_id.split("_");
-            if (parts.length < 3) return NextResponse.json({ received: true });
+                        if (typeCode === "P") {
+                            const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+                            const expiresAt = Date.now() + thirtyDaysMs;
+                            await tursoExecute("UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 5, subscription_ends_at = ? WHERE user_id = ?", [expiresAt, userId]);
+                        } else if (typeCode === "G") {
+                            const paidRp = Math.floor(Number(amount));
+                            let gemsToAdd = 0;
+                            if (paidRp >= 10000) gemsToAdd = 120;
+                            else if (paidRp >= 5000) gemsToAdd = 55;
+                            else gemsToAdd = 10;
 
-            const typeCode = parts[0];
-            const userId = parts[1];
-
-            if (typeCode === "P") {
-                const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-                const expiresAt = Date.now() + thirtyDaysMs;
-                await tursoExecute("UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 5, subscription_ends_at = ? WHERE user_id = ?", [expiresAt, userId]);
-            } else if (typeCode === "G") {
-                const paidRp = Math.floor(Number(amount));
-                let gemsToAdd = 0;
-                if (paidRp >= 10000) gemsToAdd = 120;
-                else if (paidRp >= 5000) gemsToAdd = 55;
-                else gemsToAdd = 10;
-
-                await tursoExecute("UPDATE user_progress SET points = points + ? WHERE user_id = ?", [gemsToAdd, userId]);
+                            await tursoExecute("UPDATE user_progress SET points = points + ? WHERE user_id = ?", [gemsToAdd, userId]);
+                        }
+                    }
+                }
+            } catch (logicError) {
+                console.error("Webhook Logic Error:", logicError);
             }
         }
 
         return NextResponse.json({ received: true });
-    } catch (e) { return NextResponse.json({ error: String(e) }, { status: 500 }); }
+    } catch (e) {
+        // ULTIMATE SAFETY: Never return 500 to webhook sender regarding internal logic errors, unless critical.
+        // Mayar treats non-200 as failure.
+        console.error("Critical Webhook Error:", e);
+        return NextResponse.json({ received: true, note: "Handled with internal error logged" });
+    }
 }
 
 // --------------------------------------------------------------------------------
@@ -595,6 +617,7 @@ export async function GET(req: Request, context: { params: Promise<{ slug: strin
     switch (path) {
         case "ads": return getAds();
         case "admin/transactions": return getTransactions(req); // Added
+        case "webhooks/mayar": return new NextResponse("OK"); // Allow GET Probe
         case "redeem/status": return getRedeemStatus(req);
         case "treasure/access": return getTreasureAccess(req);
         case "user/sync": return getUserSync(req);
