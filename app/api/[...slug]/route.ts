@@ -122,13 +122,14 @@ async function postPurchase(req: Request) {
                 type: "ONETIME",
                 currency: "IDR",
                 description: description,
-                externalId: orderId, // Pass the generated Order ID (contains Type & UserID)
-                redirect_url: "https://cendralingo.my.id/shop?status=success", // Force absolute URL for reliability
-                mobile_return_url: "https://cendralingo.my.id/shop?status=success", // Fallback for mobile/some environments
+                externalId: orderId,
+                metadata: { userId: userId, type: typeCode, orderId: orderId }, // ✅ ROBUST WAY: Pass Checkpoint Data via Metadata
+                redirect_url: "https://cendralingo.my.id/shop?status=success",
+                mobile_return_url: "https://cendralingo.my.id/shop?status=success",
                 amount_lock: true,
-                name: "Customer CendraLingo", // Changed from customer_name
-                email: "customer@cendralingo.id", // Changed from customer_email
-                mobile: "08123456789", // Added required field
+                name: "Customer CendraLingo",
+                email: "customer@cendralingo.id",
+                mobile: "08123456789",
                 external_id: orderId
             })
         });
@@ -522,8 +523,14 @@ async function postWebhookMayar(req: Request) {
         }
 
         // 2. Log Transaction (Safe Mode)
-        // Note: For Mayar Test Payload, 'external_id' might be missing, so we fallback to 'id'.
-        const safeExternalId = external_id || `MAYAR-${id || Date.now()}`;
+        // Check for 'metadata' field first (Robust Way)
+        let orderIdFromMeta = "";
+        if (actualData.metadata && actualData.metadata.orderId) {
+            orderIdFromMeta = actualData.metadata.orderId;
+        }
+
+        // Fallback to external_id, then to generated ID
+        const safeExternalId = orderIdFromMeta || external_id || `MAYAR-${id || Date.now()}`;
 
         try {
             await tursoExecute(
