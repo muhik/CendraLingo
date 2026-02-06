@@ -24,7 +24,26 @@ CREATE TABLE IF NOT EXISTS vouchers (
     claimed_at INTEGER,
     created_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    currency TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user_progress(user_id)
+);
 `);
 
 console.log('Tables created successfully!');
+
+// Print schema for transactions table
+console.log("\nSchema for 'transactions' table:");
+const tableInfo = db.prepare("PRAGMA table_info(transactions)").all();
+console.log("Table Info:", tableInfo);
+
+const fkInfo = db.prepare("PRAGMA foreign_key_list(transactions)").all();
+console.log("Foreign Keys:", fkInfo);
+
 db.close();

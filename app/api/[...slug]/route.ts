@@ -122,6 +122,7 @@ async function postPurchase(req: Request) {
                 type: "ONETIME",
                 currency: "IDR",
                 description: description,
+                externalId: orderId, // Pass the generated Order ID (contains Type & UserID)
                 redirect_url: "https://cendralingo.my.id/shop?status=success", // Force absolute URL for reliability
                 mobile_return_url: "https://cendralingo.my.id/shop?status=success", // Fallback for mobile/some environments
                 amount_lock: true,
