@@ -129,7 +129,7 @@ async function postPurchase(req: Request) {
                 redirect_url: "https://cendralingo.my.id/shop?status=success",
                 mobile_return_url: "https://cendralingo.my.id/shop?status=success",
                 amount_lock: true,
-                name: `User ${userId.substring(0, 8)}`,
+                name: `User ${userId.substring(0, 8)} ${Math.floor(Math.random() * 1000)}`, // Random Name to avoid "Existing Customer" conflict
                 email: `u_${userId.substring(0, 8)}_${Math.random().toString(36).substring(2, 7)}@cendralingo.id`, // Unique Email per Tx stuck to < 55 chars
                 mobile: `0812${Math.floor(10000000 + Math.random() * 90000000)}`,
                 // external_id: orderId // REMOVED
@@ -651,7 +651,7 @@ export async function POST(req: Request, context: { params: Promise<{ slug: stri
     switch (path) {
         case "ads": return getAds(); // Also support ads (get) for cleaner URL
         case "ads/manage": return postAdsManage(req);
-        case "admin/manual-approve": return postManualApprove(req); // Ensure this exists or add if missing
+        // case "admin/manual-approve": return postManualApprove(req); // Ensure this exists or add if missing
         case "feedback": return postFeedback(req);
         case "purchase": return postPurchase(req);
         case "redeem/request": return postRedeemRequest(req);
