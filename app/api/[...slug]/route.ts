@@ -116,30 +116,20 @@ async function postPurchase(req: Request) {
         const uniqueId = generateUUID();
         const orderId = `ORD-${uniqueId}`;
 
-        // Call Mayar API - POST /invoice (Official Endpoint per Docs)
-        const response = await fetch(`${mayarApiUrl}/invoice`, {
+        // Call Mayar API - POST /payment-request (For Single Payment Requests)
+        const response = await fetch(`${mayarApiUrl}/payment-request`, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${mayarApiKey}`,
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                amount: amount, // Total Amount
+                amount: amount,
                 description: `${description} [Ref: ${uniqueId.substring(0, 8)}]`,
-                items: [
-                    {
-                        name: description,
-                        quantity: 1,
-                        rate: amount, // 'rate' instead of 'price'
-                        description: `Transaction for ${description}`
-                    }
-                ],
-                // Customer details must be at ROOT level based on validation error
                 name: `User ${userId.substring(0, 8)} ${Math.floor(Math.random() * 1000)}`,
                 email: `u_${userId.substring(0, 8)}_${Math.random().toString(36).substring(2, 7)}@cendralingo.id`,
                 mobile: `0812${Math.floor(10000000 + Math.random() * 90000000)}`,
-                redirectUrl: "https://cendralingo.my.id/shop?status=success", // Note camelCase for Invoice API typically
-                redirect_url: "https://cendralingo.my.id/shop?status=success", // Fallback snake_case
+                redirect_url: "https://cendralingo.my.id/shop?status=success",
                 metadata: { userId: userId, type: typeCode, orderId: orderId }
             })
         });
