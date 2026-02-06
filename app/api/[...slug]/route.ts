@@ -142,8 +142,10 @@ async function postPurchase(req: Request) {
         if (!response.ok || !data.data) {
             console.error("Mayar API Error:", data);
             return new NextResponse(JSON.stringify({
-                error: "Payment Gateway Error",
-                details: data.message || JSON.stringify(data)
+                error: "Payment Gateway Error (Mayar)",
+                details: data.message || JSON.stringify(data),
+                sentExternalId: orderId, // DEBUG: Show user what ID we tried to send
+                sentDescription: description // DEBUG: Show description
             }), { status: 500 });
         }
 
