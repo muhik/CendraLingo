@@ -106,7 +106,7 @@ async function postPurchase(req: Request) {
         else if (planType === "GEMS_TOPUP") { amount = customAmount; description = customDescription || "Top Up Gems"; typeCode = "G"; }
         else { return new NextResponse("Invalid Plan Type", { status: 400 }); }
 
-        // Generate robust UUID for Idempotency
+        // Generate robust UUID for Metadata Tracking only
         const generateUUID = () => {
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
                 const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
@@ -114,7 +114,7 @@ async function postPurchase(req: Request) {
             });
         };
         const uniqueId = generateUUID();
-        const orderId = `ORD-${uniqueId}`; // Prefix for readability
+        const orderId = `ORD-${uniqueId}`;
 
         // Call Mayar API
         const response = await fetch(`${mayarApiUrl}/payment/create`, {
@@ -122,14 +122,14 @@ async function postPurchase(req: Request) {
             headers: {
                 "Authorization": `Bearer ${mayarApiKey}`,
                 "Content-Type": "application/json",
-                "Idempotency-Key": uniqueId // EXPLICIT IDEMPOTENCY
+                // "Idempotency-Key": uniqueId // REMOVED: Causing 409 Conflicts
             },
             body: JSON.stringify({
                 amount: amount,
                 type: "ONETIME",
                 currency: "IDR",
                 description: `${description} [Ref: ${uniqueId.substring(0, 8)}]`,
-                external_id: uniqueId, // Restore External ID with UUID
+                // external_id: uniqueId, // REMOVED: Causing 409 Conflicts
                 metadata: { userId: userId, type: typeCode, orderId: orderId },
                 redirect_url: "https://cendralingo.my.id/shop?status=success",
                 mobile_return_url: "https://cendralingo.my.id/shop?status=success",
