@@ -123,16 +123,16 @@ async function postPurchase(req: Request) {
                 amount: amount,
                 type: "ONETIME",
                 currency: "IDR",
-                description: `${description} (Ref: ${random})`, // Unique Description to bypass Deduplication
-                externalId: orderId,
-                metadata: { userId: userId, type: typeCode, orderId: orderId }, // ✅ ROBUST WAY: Pass Checkpoint Data via Metadata
+                description: `${description} [ID: ${orderId}]`, // Unique Description
+                // externalId: orderId, // REMOVED: Causing 409 Conflicts
+                metadata: { userId: userId, type: typeCode, orderId: orderId }, // We rely on this for Webhook tracking
                 redirect_url: "https://cendralingo.my.id/shop?status=success",
                 mobile_return_url: "https://cendralingo.my.id/shop?status=success",
                 amount_lock: true,
                 name: `User ${userId.substring(0, 8)}`,
-                email: `u_${userId.substring(0, 30)}@cendralingo.id`, // Shortened to fix "Max 55 chars" error
-                mobile: `0812${Math.floor(10000000 + Math.random() * 90000000)}`, // Random Mobile to bypass "Same User Spam" check
-                external_id: orderId
+                email: `u_${userId.substring(0, 30)}@cendralingo.id`,
+                mobile: `0812${Math.floor(10000000 + Math.random() * 90000000)}`,
+                // external_id: orderId // REMOVED
             })
         });
 
