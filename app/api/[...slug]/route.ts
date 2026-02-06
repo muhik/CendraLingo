@@ -116,8 +116,9 @@ async function postPurchase(req: Request) {
         const uniqueId = generateUUID();
         const orderId = `ORD-${uniqueId}`;
 
-        // Call Mayar API - POST /payment-request (For Single Payment Requests)
-        const response = await fetch(`${mayarApiUrl}/payment-request`, {
+        // Call Mayar API - /payment/create is the ONLY working endpoint
+        // Using given_id for idempotency (per Mayar/Moyasar docs)
+        const response = await fetch(`${mayarApiUrl}/payment/create`, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${mayarApiKey}`,
@@ -125,11 +126,16 @@ async function postPurchase(req: Request) {
             },
             body: JSON.stringify({
                 amount: amount,
+                type: "ONETIME",
+                currency: "IDR",
                 description: `${description} [Ref: ${uniqueId.substring(0, 8)}]`,
+                given_id: uniqueId, // Mayar-specific idempotency key
                 name: `User ${userId.substring(0, 8)} ${Math.floor(Math.random() * 1000)}`,
                 email: `u_${userId.substring(0, 8)}_${Math.random().toString(36).substring(2, 7)}@cendralingo.id`,
                 mobile: `0812${Math.floor(10000000 + Math.random() * 90000000)}`,
                 redirect_url: "https://cendralingo.my.id/shop?status=success",
+                mobile_return_url: "https://cendralingo.my.id/shop?status=success",
+                amount_lock: true,
                 metadata: { userId: userId, type: typeCode, orderId: orderId }
             })
         });
