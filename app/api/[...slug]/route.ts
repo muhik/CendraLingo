@@ -130,15 +130,14 @@ async function postPurchase(req: Request) {
                     {
                         name: description,
                         quantity: 1,
-                        price: amount,
+                        rate: amount, // 'rate' instead of 'price'
                         description: `Transaction for ${description}`
                     }
                 ],
-                customer: {
-                    name: `User ${userId.substring(0, 8)} ${Math.floor(Math.random() * 1000)}`,
-                    email: `u_${userId.substring(0, 8)}_${Math.random().toString(36).substring(2, 7)}@cendralingo.id`,
-                    mobile: `0812${Math.floor(10000000 + Math.random() * 90000000)}`
-                },
+                // Customer details must be at ROOT level based on validation error
+                name: `User ${userId.substring(0, 8)} ${Math.floor(Math.random() * 1000)}`,
+                email: `u_${userId.substring(0, 8)}_${Math.random().toString(36).substring(2, 7)}@cendralingo.id`,
+                mobile: `0812${Math.floor(10000000 + Math.random() * 90000000)}`,
                 redirectUrl: "https://cendralingo.my.id/shop?status=success", // Note camelCase for Invoice API typically
                 redirect_url: "https://cendralingo.my.id/shop?status=success", // Fallback snake_case
                 metadata: { userId: userId, type: typeCode, orderId: orderId }
