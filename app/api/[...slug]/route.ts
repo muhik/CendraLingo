@@ -131,7 +131,7 @@ async function postPurchase(req: Request) {
                 amount_lock: true,
                 name: `User ${userId.substring(0, 8)}`,
                 email: `u_${userId.substring(0, 30)}@cendralingo.id`, // Shortened to fix "Max 55 chars" error
-                mobile: "08123456789",
+                mobile: `0812${Math.floor(10000000 + Math.random() * 90000000)}`, // Random Mobile to bypass "Same User Spam" check
                 external_id: orderId
             })
         });
