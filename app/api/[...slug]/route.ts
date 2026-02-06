@@ -502,9 +502,14 @@ async function postWebhookMayar(req: Request) {
             console.warn("Webhook Body Parse Error (Non-JSON?):", e);
         }
 
-        const { id, status, external_id, amount } = body;
+        let actualData = body;
+        if (body.data && typeof body.data === 'object') {
+            actualData = body.data;
+        }
 
-        console.log("Mayar Webhook Received:", { id, status, external_id });
+        const { id, status, external_id, amount } = actualData;
+
+        console.log("Mayar Webhook Processed:", { id, status, external_id, amount });
 
         // 1. Verify Token (Relaxed for Troubleshooting)
         const mayarToken = process.env.MAYAR_WEBHOOK_TOKEN;
@@ -516,6 +521,7 @@ async function postWebhookMayar(req: Request) {
         }
 
         // 2. Log Transaction (Safe Mode)
+        // Note: For Mayar Test Payload, 'external_id' might be missing, so we fallback to 'id'.
         const safeExternalId = external_id || `MAYAR-${id || Date.now()}`;
 
         try {
@@ -537,7 +543,8 @@ async function postWebhookMayar(req: Request) {
         }
 
         // 3. Process Success
-        if (status && ["PAID", "SETTLED", "paid", "settled"].includes(status.toUpperCase())) {
+        // Added 'SUCCESS' as seen in Mayar Test Payload
+        if (status && ["PAID", "SETTLED", "SUCCESS", "paid", "settled", "success"].includes(status.toUpperCase())) {
             try {
                 if (safeExternalId) {
                     const parts = safeExternalId.split("_");
