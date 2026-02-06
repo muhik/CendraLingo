@@ -116,8 +116,8 @@ async function postPurchase(req: Request) {
         const uniqueId = generateUUID();
         const orderId = `ORD-${uniqueId}`;
 
-        // Call Mayar API - Create Invoice (Not Product Link) to allow duplicates
-        const response = await fetch(`${mayarApiUrl}/invoice/create`, {
+        // Call Mayar API - POST /invoice (Official Endpoint per Docs)
+        const response = await fetch(`${mayarApiUrl}/invoice`, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${mayarApiKey}`,
