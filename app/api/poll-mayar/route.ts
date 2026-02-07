@@ -41,6 +41,16 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Unexpected Mayar response format", data: mayarData }, { status: 500 });
         }
 
+        // DEBUG: Log first transaction structure to understand field names
+        if (transactions.length > 0) {
+            console.log("[POLL DEBUG] First TX keys:", Object.keys(transactions[0]));
+            console.log("[POLL DEBUG] First TX full:", JSON.stringify(transactions[0], null, 2));
+        }
+
+        if (!Array.isArray(transactions)) {
+            return NextResponse.json({ error: "Unexpected Mayar response format", data: mayarData }, { status: 500 });
+        }
+
         let processed = 0;
         let skipped = 0;
         const errors: string[] = [];
