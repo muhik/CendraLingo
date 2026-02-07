@@ -145,34 +145,35 @@ async function postPurchase(req: Request) {
                         amount: amount
                     }
                 ]
-            });
+            })
+        });
 
-            const data = await response.json();
+        const data = await response.json();
 
-            // Check if Mayar returned a valid data object
-            if(!response.ok || !data.data) {
-                console.error("Mayar API Error:", data);
-        return new NextResponse(JSON.stringify({
-            error: "Payment Gateway Error (Mayar)",
-            details: `${data.message || JSON.stringify(data)} [SENT_ID: ${orderId}]`,
-            sentExternalId: orderId, // DEBUG: Show user what ID we tried to send
-            sentDescription: description // DEBUG: Show description
-        }), { status: 500 });
-    }
+        // Check if Mayar returned a valid data object
+        if (!response.ok || !data.data) {
+            console.error("Mayar API Error:", data);
+            return new NextResponse(JSON.stringify({
+                error: "Payment Gateway Error (Mayar)",
+                details: `${data.message || JSON.stringify(data)} [SENT_ID: ${orderId}]`,
+                sentExternalId: orderId, // DEBUG: Show user what ID we tried to send
+                sentDescription: description // DEBUG: Show description
+            }), { status: 500 });
+        }
 
         // Return the link (Mayar typically returns `link` or `payment_url` inside `data`)
         return NextResponse.json({ url: data.data.link || data.data.payment_url, externalId: orderId });
 
-} catch (e: any) {
-    console.error("Purchase Error:", e);
-    return new NextResponse(JSON.stringify({
-        error: e.message || String(e),
-        details: "Transaction Failed"
-    }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" }
-    });
-}
+    } catch (e: any) {
+        console.error("Purchase Error:", e);
+        return new NextResponse(JSON.stringify({
+            error: e.message || String(e),
+            details: "Transaction Failed"
+        }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+        });
+    }
 }
 
 // --------------------------------------------------------------------------------
