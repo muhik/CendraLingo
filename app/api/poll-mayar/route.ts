@@ -16,8 +16,8 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "MAYAR_API_KEY missing" }, { status: 500 });
         }
 
-        // Fetch latest transactions from Mayar
-        const response = await fetch(`${mayarApiUrl}/payment/list?limit=50`, {
+        // Fetch latest transactions from Mayar - try /transaction endpoint
+        const response = await fetch(`${mayarApiUrl}/transaction?limit=50`, {
             method: "GET",
             headers: {
                 "Authorization": `Bearer ${mayarApiKey}`,
