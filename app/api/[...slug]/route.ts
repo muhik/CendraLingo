@@ -3,6 +3,8 @@ import { tursoQuery, tursoExecute } from "@/db/turso-http";
 
 import { Security, SecurityEvent, SecuritySeverity } from "@/lib/security";
 
+export const runtime = "nodejs";
+
 
 
 // --------------------------------------------------------------------------------
