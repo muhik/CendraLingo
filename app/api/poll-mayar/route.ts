@@ -84,9 +84,14 @@ export async function GET(req: Request) {
                     continue;
                 }
 
-                // Check if already processed
-                const existing = await tursoQuery("SELECT order_id FROM transactions WHERE order_id = ?", [orderId]);
+                // Check if already processed (by OrderID OR by InvoiceID in json_data)
+                // This prevents duplicates even if OrderID format changes
+                const existing = await tursoQuery(
+                    "SELECT order_id FROM transactions WHERE order_id = ? OR json_data LIKE ?",
+                    [orderId, `%"id":"${invoiceId}"%`]
+                );
                 if (existing.length > 0) {
+                    console.log(`[POLL] Duplicate detected for ${orderId} / ${invoiceId}`);
                     skipped++;
                     continue;
                 }
