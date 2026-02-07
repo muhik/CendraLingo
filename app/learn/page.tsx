@@ -164,7 +164,20 @@ export default function LearnPage() {
                                                     {/* Render Lessons */}
                                                     {unit.lessons.map((lesson, index) => {
                                                         const isCompleted = completedLessons.includes(lesson.id);
-                                                        const isFormattedCurrent = index === 0 ? (!isCompleted && unit.id === 1) : (completedLessons.includes(unit.lessons[index - 1].id) && !isCompleted);
+
+                                                        // Determine if this is the start of the unit
+                                                        const isFirstLessonOfUnit = index === 0;
+
+                                                        // Check if previous unit is completed (to unlock this unit)
+                                                        const previousUnit = curriculumData.find(u => u.id === unit.id - 1);
+                                                        const isPrevUnitCompleted = previousUnit
+                                                            ? previousUnit.lessons.every(l => completedLessons.includes(l.id))
+                                                            : true; // Unit 1 has no previous unit, so always unlocked if uncompleted
+
+                                                        const isFormattedCurrent = isFirstLessonOfUnit
+                                                            ? (!isCompleted && isPrevUnitCompleted)
+                                                            : (completedLessons.includes(unit.lessons[index - 1].id) && !isCompleted);
+
                                                         const isLocked = !isCompleted && !isFormattedCurrent;
 
                                                         // Calculate offset for winding path (Sin wave)

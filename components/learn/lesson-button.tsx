@@ -104,6 +104,7 @@ export const LessonButton = ({
                     <Button
                         size="rounded"
                         className="h-20 w-20 bg-primary border-none shadow-[0_6px_0_0_#1e9e49] active:shadow-none active:translate-y-[6px] rounded-full z-30 relative hover:bg-primary hover:scale-105 transition-all text-[#112217]"
+                        onClick={handleClick}
                     >
                         <Icon className="h-8 w-8 fill-current" />
                     </Button>
