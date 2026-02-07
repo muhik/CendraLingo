@@ -123,7 +123,7 @@ async function postPurchase(req: Request) {
         const expiryDate = new Date();
         expiryDate.setHours(expiryDate.getHours() + 24);
 
-        const response = await fetch(`${mayarApiUrl}/payment/create`, {
+        const response = await fetch(`${mayarApiUrl}/invoice/create`, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${mayarApiKey}`,
