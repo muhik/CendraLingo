@@ -540,22 +540,37 @@ async function postWebhookMayar(req: Request) {
             // Proceed anyway
         }
 
-        // 2. Log Transaction (Safe Mode)
-        // Check for 'metadata' field first (Robust Way)
+        // 2. Log Transaction
+        // PRIORITY: Check 'extraData' (Invoice Payload) or 'metadata' (Old Payload)
         let orderIdFromMeta = "";
-        if (actualData.metadata && actualData.metadata.orderId) {
-            orderIdFromMeta = actualData.metadata.orderId;
+        let userIdFromMeta = "";
+        let typeFromMeta = "";
+
+        // Normalize extraData/metadata
+        let metaSource = actualData.extraData || actualData.metadata || {};
+
+        // Handle if stringified (just in case)
+        if (typeof metaSource === 'string') {
+            try { metaSource = JSON.parse(metaSource); } catch (e) { }
+        }
+
+        if (metaSource && typeof metaSource === 'object') {
+            if (metaSource.orderId) orderIdFromMeta = metaSource.orderId;
+            if (metaSource.userId) userIdFromMeta = metaSource.userId;
+            if (metaSource.type) typeFromMeta = metaSource.type;
         }
 
         // Fallback to external_id, then to generated ID
         const safeExternalId = orderIdFromMeta || external_id || `MAYAR-${id || Date.now()}`;
+        // Fallback userId from external_id split (if available)
+        const safeUserId = userIdFromMeta || (safeExternalId.includes("_") ? safeExternalId.split("_")[1] : "unknown");
 
         try {
             await tursoExecute(
                 "INSERT INTO transactions (order_id, user_id, gross_amount, status, payment_type, transaction_time, json_data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(order_id) DO UPDATE SET status=excluded.status",
                 [
                     safeExternalId,
-                    (safeExternalId).split("_")[1] || "unknown",
+                    safeUserId,
                     Number(amount || 0),
                     status || "unknown",
                     "MAYAR",
@@ -572,26 +587,37 @@ async function postWebhookMayar(req: Request) {
         // Added 'SUCCESS' as seen in Mayar Test Payload
         if (status && ["PAID", "SETTLED", "SUCCESS", "paid", "settled", "success"].includes(status.toUpperCase())) {
             try {
-                if (safeExternalId) {
+                // Determine Type and User
+                let typeCode = typeFromMeta;
+                let finalUserId = userIdFromMeta;
+
+                // Fallback to parsing external_id if meta is missing
+                if ((!typeCode || !finalUserId) && safeExternalId.includes("_")) {
                     const parts = safeExternalId.split("_");
                     if (parts.length >= 2) {
-                        const typeCode = parts[0];
-                        const userId = parts[1];
-
-                        if (typeCode === "P") {
-                            const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-                            const expiresAt = Date.now() + thirtyDaysMs;
-                            await tursoExecute("UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 5, subscription_ends_at = ? WHERE user_id = ?", [expiresAt, userId]);
-                        } else if (typeCode === "G") {
-                            const paidRp = Math.floor(Number(amount));
-                            let gemsToAdd = 0;
-                            if (paidRp >= 10000) gemsToAdd = 120;
-                            else if (paidRp >= 5000) gemsToAdd = 55;
-                            else gemsToAdd = 10;
-
-                            await tursoExecute("UPDATE user_progress SET points = points + ? WHERE user_id = ?", [gemsToAdd, userId]);
-                        }
+                        typeCode = parts[0];
+                        finalUserId = parts[1];
                     }
+                }
+
+                if (typeCode && finalUserId) {
+                    if (typeCode === "P") {
+                        const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+                        const expiresAt = Date.now() + thirtyDaysMs;
+                        await tursoExecute("UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 5, subscription_ends_at = ? WHERE user_id = ?", [expiresAt, finalUserId]);
+                    } else if (typeCode === "G") {
+                        const paidRp = Math.floor(Number(amount));
+                        let gemsToAdd = 0;
+                        if (paidRp >= 10000) gemsToAdd = 120; // 10k = 120 Gems
+                        else if (paidRp >= 5000) gemsToAdd = 55; // 5k = 55 Gems
+                        else if (paidRp >= 1000) gemsToAdd = 10; // 1k = 10 Gems (Test)
+                        else gemsToAdd = 10;
+
+                        await tursoExecute("UPDATE user_progress SET points = points + ? WHERE user_id = ?", [gemsToAdd, finalUserId]);
+                    }
+                    console.log(`[WEBHOOK] Success processing for User ${finalUserId}, Type ${typeCode}`);
+                } else {
+                    console.warn(`[WEBHOOK] Could not determine Type/User from OrderID: ${safeExternalId}`);
                 }
             } catch (logicError) {
                 console.error("Webhook Logic Error:", logicError);
