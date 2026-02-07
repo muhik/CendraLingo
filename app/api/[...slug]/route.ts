@@ -515,151 +515,99 @@ async function postVouchersRedeem(req: Request) {
 // LOGIC: WEBHOOKS (Mayar)
 // --------------------------------------------------------------------------------
 async function postWebhookMayar(req: Request) {
+    // STRATEGY: Parse body synchronously, then return 200 IMMEDIATELY
+    // Background processing happens via waitUntil or fire-and-forget pattern
+
+    let rawBodyText = "";
+    let body: any = {};
+
     try {
-        // DIAGNOSTIC: Log raw request info
-        const contentType = req.headers.get("Content-Type") || "MISSING";
-        console.log("[WEBHOOK DEBUG] Content-Type:", contentType);
-        console.log("[WEBHOOK DEBUG] Headers:", JSON.stringify(Object.fromEntries(req.headers.entries())));
+        rawBodyText = await req.text();
+        if (rawBodyText) body = JSON.parse(rawBodyText);
+    } catch (e) {
+        console.warn("[WEBHOOK] Body parse error:", e);
+    }
 
-        let body: any = {};
-        let rawBodyText = "";
-        let parseError = "";
+    // Extract data BEFORE responding
+    let actualData = body;
+    if (body.data && typeof body.data === 'object') {
+        actualData = body.data;
+    }
+
+    const { id, status, external_id, amount } = actualData;
+
+    console.log("Mayar Webhook Processed:", { id, status, external_id, amount });
+
+    // 1. Verify Token (Relaxed for Troubleshooting)
+    const mayarToken = process.env.MAYAR_WEBHOOK_TOKEN;
+    const receivedToken = req.headers.get("X-Callback-Token");
+
+    if (mayarToken && receivedToken !== mayarToken) {
+        console.warn(`Webhook Token Mismatch: Received ${receivedToken} vs Expected ${mayarToken}`);
+        // Proceed anyway
+    }
+
+    // 2. Log Transaction
+    // PRIORITY: Check 'extraData' (Invoice Payload) or 'metadata' (Old Payload)
+    let orderIdFromMeta = "";
+    let userIdFromMeta = "";
+    let typeFromMeta = "";
+
+    // Normalize extraData/metadata
+    let metaSource = actualData.extraData || actualData.metadata || {};
+
+    // Handle if stringified (just in case)
+    if (typeof metaSource === 'string') {
+        try { metaSource = JSON.parse(metaSource); } catch (e) { }
+    }
+
+    if (metaSource && typeof metaSource === 'object') {
+        if (metaSource.orderId) orderIdFromMeta = metaSource.orderId;
+        if (metaSource.userId) userIdFromMeta = metaSource.userId;
+        if (metaSource.type) typeFromMeta = metaSource.type;
+    }
+
+    // Fallback to external_id, then to generated ID
+    const safeExternalId = orderIdFromMeta || external_id || `MAYAR-${id || Date.now()}`;
+    // Fallback userId from external_id split (if available)
+    const safeUserId = userIdFromMeta || (safeExternalId.includes("_") ? safeExternalId.split("_")[1] : "unknown");
+
+    // FIRE-AND-FORGET: Process DB operations in background WITHOUT blocking response
+    Promise.resolve().then(async () => {
         try {
-            rawBodyText = await req.text();
-            console.log("[WEBHOOK DEBUG] Raw Body (first 500 chars):", rawBodyText?.substring(0, 500));
-            if (rawBodyText) body = JSON.parse(rawBodyText);
-        } catch (e) {
-            parseError = String(e);
-            console.warn("Webhook Body Parse Error (Non-JSON?):", e);
-        }
-        console.log("[WEBHOOK DEBUG] Parsed Body Keys:", Object.keys(body));
-
-        // PERSIST DEBUG INFO TO DATABASE
-        try {
-            await tursoExecute(
-                "INSERT INTO webhook_logs (timestamp, content_type, headers, body_raw, body_parsed, error) VALUES (?, ?, ?, ?, ?, ?)",
-                [
-                    new Date().toISOString(),
-                    contentType,
-                    JSON.stringify(Object.fromEntries(req.headers.entries())),
-                    rawBodyText?.substring(0, 2000) || "EMPTY",
-                    JSON.stringify(Object.keys(body)),
-                    parseError || "NONE"
-                ]
-            );
-        } catch (logErr) {
-            console.warn("Failed to write webhook log to DB:", logErr);
-        }
-
-        let actualData = body;
-        if (body.data && typeof body.data === 'object') {
-            actualData = body.data;
-        }
-
-        const { id, status, external_id, amount } = actualData;
-
-        console.log("Mayar Webhook Processed:", { id, status, external_id, amount });
-
-        // 1. Verify Token (Relaxed for Troubleshooting)
-        const mayarToken = process.env.MAYAR_WEBHOOK_TOKEN;
-        const receivedToken = req.headers.get("X-Callback-Token");
-
-        if (mayarToken && receivedToken !== mayarToken) {
-            console.warn(`Webhook Token Mismatch: Received ${receivedToken} vs Expected ${mayarToken}`);
-            // Proceed anyway
-        }
-
-        // 2. Log Transaction
-        // PRIORITY: Check 'extraData' (Invoice Payload) or 'metadata' (Old Payload)
-        let orderIdFromMeta = "";
-        let userIdFromMeta = "";
-        let typeFromMeta = "";
-
-        // Normalize extraData/metadata
-        let metaSource = actualData.extraData || actualData.metadata || {};
-
-        // Handle if stringified (just in case)
-        if (typeof metaSource === 'string') {
-            try { metaSource = JSON.parse(metaSource); } catch (e) { }
-        }
-
-        if (metaSource && typeof metaSource === 'object') {
-            if (metaSource.orderId) orderIdFromMeta = metaSource.orderId;
-            if (metaSource.userId) userIdFromMeta = metaSource.userId;
-            if (metaSource.type) typeFromMeta = metaSource.type;
-        }
-
-        // Fallback to external_id, then to generated ID
-        const safeExternalId = orderIdFromMeta || external_id || `MAYAR-${id || Date.now()}`;
-        // Fallback userId from external_id split (if available)
-        const safeUserId = userIdFromMeta || (safeExternalId.includes("_") ? safeExternalId.split("_")[1] : "unknown");
-
-        try {
+            // Insert transaction
             await tursoExecute(
                 "INSERT INTO transactions (order_id, user_id, gross_amount, status, payment_type, transaction_time, json_data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(order_id) DO UPDATE SET status=excluded.status",
-                [
-                    safeExternalId,
-                    safeUserId,
-                    Number(amount || 0),
-                    status || "unknown",
-                    "MAYAR",
-                    new Date().toISOString(),
-                    JSON.stringify(body),
-                    Date.now()
-                ]
+                [safeExternalId, safeUserId, Number(amount || 0), status || "unknown", "MAYAR", new Date().toISOString(), JSON.stringify(body), Date.now()]
             );
-        } catch (dbError) {
-            console.error("Webhook DB Insert Error (Ignored to keep 200 OK):", dbError);
-        }
+            console.log("[WEBHOOK BG] Transaction inserted:", safeExternalId);
 
-        // 3. Process Success
-        // Added 'SUCCESS' as seen in Mayar Test Payload
-        if (status && ["PAID", "SETTLED", "SUCCESS", "paid", "settled", "success"].includes(status.toUpperCase())) {
-            try {
-                // Determine Type and User
-                let typeCode = typeFromMeta;
-                let finalUserId = userIdFromMeta;
+            // Update gems/subscription if success
+            if (status && ["PAID", "SETTLED", "SUCCESS", "paid", "settled", "success"].includes(String(status).toUpperCase())) {
+                if (typeFromMeta === "G" && userIdFromMeta) {
+                    const paidRp = Math.floor(Number(amount));
+                    let gemsToAdd = 10;
+                    if (paidRp >= 10000) gemsToAdd = 120;
+                    else if (paidRp >= 5000) gemsToAdd = 55;
 
-                // Fallback to parsing external_id if meta is missing
-                if ((!typeCode || !finalUserId) && safeExternalId.includes("_")) {
-                    const parts = safeExternalId.split("_");
-                    if (parts.length >= 2) {
-                        typeCode = parts[0];
-                        finalUserId = parts[1];
-                    }
-                }
-
-                if (typeCode && finalUserId) {
-                    if (typeCode === "P") {
-                        const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-                        const expiresAt = Date.now() + thirtyDaysMs;
-                        await tursoExecute("UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 5, subscription_ends_at = ? WHERE user_id = ?", [expiresAt, finalUserId]);
-                    } else if (typeCode === "G") {
-                        const paidRp = Math.floor(Number(amount));
-                        let gemsToAdd = 0;
-                        if (paidRp >= 10000) gemsToAdd = 120; // 10k = 120 Gems
-                        else if (paidRp >= 5000) gemsToAdd = 55; // 5k = 55 Gems
-                        else if (paidRp >= 1000) gemsToAdd = 10; // 1k = 10 Gems (Test)
-                        else gemsToAdd = 10;
-
-                        await tursoExecute("UPDATE user_progress SET points = points + ? WHERE user_id = ?", [gemsToAdd, finalUserId]);
-                    }
-                    console.log(`[WEBHOOK] Success processing for User ${finalUserId}, Type ${typeCode}`);
+                    await tursoExecute("UPDATE user_progress SET points = points + ? WHERE user_id = ?", [gemsToAdd, userIdFromMeta]);
+                    console.log(`[WEBHOOK BG] Added ${gemsToAdd} gems to user ${userIdFromMeta}`);
+                } else if (typeFromMeta === "P" && userIdFromMeta) {
+                    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+                    const expiresAt = Date.now() + thirtyDaysMs;
+                    await tursoExecute("UPDATE user_progress SET has_active_subscription = 1, points = points + 1000, hearts = 5, subscription_ends_at = ? WHERE user_id = ?", [expiresAt, userIdFromMeta]);
+                    console.log(`[WEBHOOK BG] Activated PRO for user ${userIdFromMeta}`);
                 } else {
-                    console.warn(`[WEBHOOK] Could not determine Type/User from OrderID: ${safeExternalId}`);
+                    console.warn("[WEBHOOK BG] Could not determine type/user from:", { typeFromMeta, userIdFromMeta, safeExternalId });
                 }
-            } catch (logicError) {
-                console.error("Webhook Logic Error:", logicError);
             }
+        } catch (bgError) {
+            console.error("[WEBHOOK BG] Background processing error:", bgError);
         }
+    }).catch(e => console.error("[WEBHOOK BG] Unhandled error:", e));
 
-        return NextResponse.json({ received: true });
-    } catch (e) {
-        // ULTIMATE SAFETY: Never return 500 to webhook sender regarding internal logic errors, unless critical.
-        // Mayar treats non-200 as failure.
-        console.error("Critical Webhook Error:", e);
-        return NextResponse.json({ received: true, note: "Handled with internal error logged" });
-    }
+    // RETURN IMMEDIATELY - Don't wait for background processing
+    return NextResponse.json({ received: true });
 }
 
 // --------------------------------------------------------------------------------
