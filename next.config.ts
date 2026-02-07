@@ -26,8 +26,22 @@ const nextConfig: NextConfig = {
   },
 
   // Disable image optimization for Cloudflare Pages (OpenNext)
+  // Disable image optimization for Cloudflare Pages (OpenNext)
   images: {
     unoptimized: true,
+  },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: "script-src 'self' 'unsafe-eval' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:;",
+          },
+        ],
+      },
+    ];
   },
 };
 
