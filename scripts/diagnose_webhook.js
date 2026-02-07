@@ -19,26 +19,26 @@ async function main() {
         const payload = {
             "event": "payment.received",
             "data": {
-                "id": "9906df54-033a-4f42-9f94-1c55e6b079f3",
-                "transactionId": "9906df54-033a-4f42-9f94-1c55e6b079f3",
+                "id": "7931caca-8f48-45bf-a177-3b743238c280",
+                "transactionId": "7931caca-8f48-45bf-a177-3b743238c280",
                 "status": "SUCCESS",
                 "transactionStatus": "created",
-                "createdAt": "2026-02-07T06:50:04.264Z",
-                "updatedAt": "2026-02-07T06:50:24.747Z",
+                "createdAt": "2026-02-07T07:09:23.334Z",
+                "updatedAt": "2026-02-07T07:09:37.013Z",
                 "merchantId": "9def8dd8-bd05-4cf8-87ac-bd1fb31c2ac9",
                 "merchantName": "Cendra Lingo",
                 "merchantEmail": "muhikmu@gmail.com",
-                "customerId": "c5d32fc9-1c4a-41f3-9aff-fe0d34db06ed",
-                "customerName": "Guest8965",
-                "customerEmail": "guest1770447003001@example.com",
-                "customerMobile": "081211259158",
+                "customerId": "da5f3b75-dfe1-4987-b8af-36c75057b4f6",
+                "customerName": "Guest12446",
+                "customerEmail": "guest1770448162051@example.com",
+                "customerMobile": "081287620989",
                 "amount": 1000,
                 "paymentLinkAmount": 1000,
                 "isAdminFeeBorneByCustomer": null,
                 "isChannelFeeBorneByCustomer": null,
-                "productId": "6afd09d7-8e5f-4b9a-8740-d0b2cc3afd0d",
+                "productId": "40ae57ac-8d10-4afa-88f1-157955c49af2",
                 "productName": "INVOICE",
-                "productDescription": "Trx 1770447003001-962",
+                "productDescription": "Trx 1770448162051-350",
                 "productType": "invoice",
                 "pixelFbp": null,
                 "pixelFbc": null,
@@ -48,11 +48,10 @@ async function main() {
                 "extraData": {
                     "userId": "0f9e0bd9-f0bb-48fd-9422-a45dc0ff4026",
                     "type": "G",
-                    "orderId": "ORD-98caf928-66fa-45bb-af76-685ed8c35cb3"
+                    "orderId": "ORD-04f0683e-efed-4fb0-b0e1-227d0a7f64be"
                 }
             }
         };
-
         const actualData = payload.data;
         let orderIdFromMeta = "";
         let userIdFromMeta = "";

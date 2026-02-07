@@ -4,6 +4,7 @@ export async function tursoQuery(sql: string, args: any[] = []) {
     const token = process.env.TURSO_AUTH_TOKEN;
 
     if (!url || !token) {
+        console.error("CRITICAL: TURSO_CONNECTION_URL or TURSO_AUTH_TOKEN is missing in process.env");
         throw new Error("Database credentials missing");
     }
 
