@@ -136,8 +136,8 @@ async function postPurchase(req: Request) {
                 mobile: `0812${Math.floor(10000000 + Math.random() * 90000000)}`,
                 redirectUrl: "https://cendralingo.my.id/shop?status=success", // CamelCase strictly per docs
                 description: `Trx ${Date.now()}-${Math.floor(Math.random() * 1000)}`, // Random description
-                expiredAt: expiryDate.toISOString(), // REQUIRED field
-                metadata: { userId: userId, type: typeCode, orderId: orderId }
+                expiredAt: expiryDate.toISOString() // REQUIRED field
+                // Removed metadata to match official example exactly
             })
         });
 
