@@ -141,7 +141,9 @@ async function postPurchase(req: Request) {
                 items: [ // REQUIRED field for Invoice
                     {
                         name: description,
+                        description: description, // REQUIRED field per 400 error
                         quantity: 1,
+                        rate: amount, // REQUIRED field per 400 error (Unit Price)
                         amount: amount
                     }
                 ]
