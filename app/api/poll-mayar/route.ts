@@ -53,9 +53,24 @@ export async function GET(req: Request) {
                 const amount = tx.amount || tx.nettAmount || 0;
                 const extraData = tx.extraData || tx.metadata || {};
 
-                const userId = extraData.userId || "";
-                const typeCode = extraData.type || "";
-                const orderId = extraData.orderId || txId;
+                // Mayar stores userId and type in external_id with format: "G_userId" or "P_userId"
+                const externalId = tx.external_id || tx.externalId || extraData.orderId || "";
+                const orderId = externalId || txId;
+
+                // Parse external_id to extract type and userId
+                let typeCode = extraData.type || "";
+                let userId = extraData.userId || "";
+
+                // Try parsing from external_id if format is "TYPE_USERID"
+                if ((!typeCode || !userId) && externalId && externalId.includes("_")) {
+                    const parts = externalId.split("_");
+                    if (parts.length >= 2) {
+                        typeCode = parts[0]; // G or P
+                        userId = parts[1];   // userId
+                    }
+                }
+
+                console.log(`[POLL] Processing tx: ${orderId}, status: ${status}, type: ${typeCode}, userId: ${userId}, amount: ${amount}`);
 
                 // Skip non-success transactions
                 if (!["SUCCESS", "PAID", "SETTLED", "success", "paid", "settled"].includes(String(status).toUpperCase())) {
