@@ -522,14 +522,34 @@ async function postWebhookMayar(req: Request) {
         console.log("[WEBHOOK DEBUG] Headers:", JSON.stringify(Object.fromEntries(req.headers.entries())));
 
         let body: any = {};
+        let rawBodyText = "";
+        let parseError = "";
         try {
-            const text = await req.text();
-            console.log("[WEBHOOK DEBUG] Raw Body (first 500 chars):", text?.substring(0, 500));
-            if (text) body = JSON.parse(text);
+            rawBodyText = await req.text();
+            console.log("[WEBHOOK DEBUG] Raw Body (first 500 chars):", rawBodyText?.substring(0, 500));
+            if (rawBodyText) body = JSON.parse(rawBodyText);
         } catch (e) {
+            parseError = String(e);
             console.warn("Webhook Body Parse Error (Non-JSON?):", e);
         }
         console.log("[WEBHOOK DEBUG] Parsed Body Keys:", Object.keys(body));
+
+        // PERSIST DEBUG INFO TO DATABASE
+        try {
+            await tursoExecute(
+                "INSERT INTO webhook_logs (timestamp, content_type, headers, body_raw, body_parsed, error) VALUES (?, ?, ?, ?, ?, ?)",
+                [
+                    new Date().toISOString(),
+                    contentType,
+                    JSON.stringify(Object.fromEntries(req.headers.entries())),
+                    rawBodyText?.substring(0, 2000) || "EMPTY",
+                    JSON.stringify(Object.keys(body)),
+                    parseError || "NONE"
+                ]
+            );
+        } catch (logErr) {
+            console.warn("Failed to write webhook log to DB:", logErr);
+        }
 
         let actualData = body;
         if (body.data && typeof body.data === 'object') {
