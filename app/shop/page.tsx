@@ -47,6 +47,13 @@ function ShopContent() {
                 toast.success("Gems & Status Diperbarui! 💎");
             }, 2000);
         }
+
+        // Auto-refresh every 30 seconds to keep data fresh
+        const intervalId = setInterval(() => {
+            refreshUserData();
+        }, 30000);
+
+        return () => clearInterval(intervalId);
     }, [refreshUserData, searchParams]);
 
     // Pending purchase to resume after login
