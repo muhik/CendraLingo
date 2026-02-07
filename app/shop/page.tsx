@@ -6,7 +6,7 @@ import { ShopItem } from "@/components/shop/shop-item";
 import { AdSidebar } from "@/components/layout/ad-sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Heart, Flame, Store, Gem, Trophy, CheckCircle, X } from "lucide-react";
+import { Heart, Flame, Store, Gem, Trophy, CheckCircle, X, Zap } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { AuthModal } from "@/components/modals/auth-modal";
 import { useUserProgress } from "@/store/use-user-progress";
@@ -520,7 +520,7 @@ function ShopContent() {
                     {/* POWER-UPS */}
                     <div className="mb-12 border-b-2 border-white/5 pb-10">
                         <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                            <Image src="/lightning.svg" height={24} width={24} alt="Lightning" className="text-yellow-400" /> Power-Ups
+                            <Zap className="h-6 w-6 text-yellow-400 fill-yellow-400" /> Power-Ups
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <ShopItem
