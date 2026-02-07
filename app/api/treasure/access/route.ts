@@ -137,6 +137,8 @@ export async function GET(req: Request) {
             hasAccess,
             alreadySpunToday,
             settings
+        }, {
+            headers: { "Cache-Control": "no-store, max-age=0" }
         });
 
     } catch (error: any) {

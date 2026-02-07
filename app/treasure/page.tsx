@@ -68,8 +68,10 @@ export default function TreasurePage() {
                 } else if (data.alreadySpunToday) {
                     setAlreadySpunToday(true);
                     setCanSpin(false);
+                    setNoAccess(false);
                 } else {
                     setCanSpin(true);
+                    setNoAccess(false);
                 }
             } catch {
                 setNoAccess(true);

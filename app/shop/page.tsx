@@ -517,6 +517,35 @@ function ShopContent() {
 
 
 
+                    {/* POWER-UPS */}
+                    <div className="mb-12 border-b-2 border-white/5 pb-10">
+                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                            <Image src="/lightning.svg" height={24} width={24} alt="Lightning" className="text-yellow-400" /> Power-Ups
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <ShopItem
+                                name="Refill Hati"
+                                description="Penuhkan kembali hatimu! (Max 5)"
+                                Icon={Heart}
+                                iconColor="text-rose-500 fill-rose-500"
+                                price={200}
+                                points={points}
+                                hasActive={hearts === 5}
+                                onBuy={handleRefillHearts}
+                            />
+                            <ShopItem
+                                name="Streak Freeze"
+                                description="Lindungi streak kamu satu hari penuh!"
+                                Icon={Flame}
+                                iconColor="text-orange-500 fill-orange-500"
+                                price={2000}
+                                points={points}
+                                hasActive={false} // Logic for active freeze can be added later
+                                onBuy={handleBuyFreeze}
+                            />
+                        </div>
+                    </div>
+
                     {/* GEMS GRID */}
                     <div>
                         <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
