@@ -21,7 +21,9 @@ import { useSearchParams } from "next/navigation";
 function ShopContent() {
     const searchParams = useSearchParams();
     const autoUpgrade = searchParams.get("auto_upgrade");
-    const { userId, points, hearts, cashbackBalance, spendPoints, refillHearts, addPoints, addCashback, isGuest, hasActiveSubscription, upgradeToPro, syncWithDb, refreshUserData } = useUserProgress();
+    const { userId, points, hearts, cashbackBalance, spendPoints, refillHearts, addHearts, addPoints, addCashback, isGuest, hasActiveSubscription, upgradeToPro, syncWithDb, refreshUserData } = useUserProgress();
+    // ... (lines 25-179 omitted)
+
     const [isProcessing, setIsProcessing] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showRedeemModal, setShowRedeemModal] = useState(false);
@@ -183,6 +185,15 @@ function ShopContent() {
             toast.success("Added +5 Hearts! ❤️");
         } else {
             toast.error("Not enough gems! Top up below.");
+        }
+    };
+
+    const handleBuyMegaHeart = () => {
+        if (spendPoints(2000)) {
+            addHearts(10);
+            toast.success("WOW! +10 Hearts Added! ❤️‍🔥");
+        } else {
+            toast.error("Not enough gems!");
         }
     };
 
@@ -525,23 +536,23 @@ function ShopContent() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <ShopItem
                                 name="Refill Hati"
-                                description="Penuhkan kembali hatimu! (Max 5)"
+                                description="Penuhkan kembali hatimu! (+5)"
                                 Icon={Heart}
                                 iconColor="text-rose-500 fill-rose-500"
                                 price={200}
                                 points={points}
-                                hasActive={hearts === 5}
+                                hasActive={false} // Always buyable to stack
                                 onBuy={handleRefillHearts}
                             />
                             <ShopItem
-                                name="Streak Freeze"
-                                description="Lindungi streak kamu satu hari penuh!"
-                                Icon={Flame}
-                                iconColor="text-orange-500 fill-orange-500"
+                                name="Tumpukan Hati"
+                                description="Stok Hati Melimpah! (+10)"
+                                Icon={Heart}
+                                iconColor="text-rose-600 fill-rose-600"
                                 price={2000}
                                 points={points}
-                                hasActive={false} // Logic for active freeze can be added later
-                                onBuy={handleBuyFreeze}
+                                hasActive={false}
+                                onBuy={handleBuyMegaHeart}
                             />
                         </div>
                     </div>

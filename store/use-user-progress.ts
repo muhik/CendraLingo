@@ -20,6 +20,7 @@ interface UserProgressState {
     increaseStreak: () => void;
     reduceHeart: () => void;
     refillHearts: () => void;
+    addHearts: (amount: number) => void;
     addPoints: (amount: number) => void;
     decreasePoints: (amount: number) => void;
     addCashback: (amount: number) => void;
@@ -92,6 +93,11 @@ export const useUserProgress = create<UserProgressState>()(
 
             refillHearts: () => {
                 set((state) => ({ hearts: state.hearts + 5 })); // Unlimited Stacking
+                get().syncWithDb();
+            },
+
+            addHearts: (amount: number) => {
+                set((state) => ({ hearts: state.hearts + amount }));
                 get().syncWithDb();
             },
 
