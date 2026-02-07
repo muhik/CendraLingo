@@ -18,6 +18,12 @@ export async function GET(req: Request) {
             return NextResponse.json({ users });
         }
 
+        // List transactions for a user
+        if (action === "list_tx" && userId) {
+            const txs = await tursoQuery("SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 20", [userId]);
+            return NextResponse.json({ txs });
+        }
+
         // Add gems
         if (action === "add" && userId) {
             await tursoExecute("UPDATE user_progress SET points = points + ? WHERE user_id = ?", [gems, userId]);
