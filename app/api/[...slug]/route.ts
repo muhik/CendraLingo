@@ -116,8 +116,13 @@ async function postPurchase(req: Request) {
         const uniqueId = generateUUID();
         const orderId = `ORD-${uniqueId}`;
 
-        // Call Mayar API - /payment/create is the ONLY working endpoint
-        // Using given_id for idempotency (per Mayar/Moyasar docs)
+        // Call Mayar API - POST /payment/create (Request Payment Endpoint)
+        // Docs: https://docs.mayar.id/api-reference/reqpayment/create
+
+        // Calculate Expiry (24 Hours)
+        const expiryDate = new Date();
+        expiryDate.setHours(expiryDate.getHours() + 24);
+
         const response = await fetch(`${mayarApiUrl}/payment/create`, {
             method: "POST",
             headers: {
@@ -125,15 +130,13 @@ async function postPurchase(req: Request) {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                amount: amount,
-                currency: "IDR",
-                // TEST: Completely random description to verify "Product Name Collision" hypothesis
-                description: `Trx ${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-                name: `Guest${Math.floor(Math.random() * 100000)}`, // Completely random guest name
-                email: `guest${Date.now()}@example.com`, // Completely unique email using timestamp
+                name: `Guest${Math.floor(Math.random() * 100000)}`,
+                email: `guest${Date.now()}@example.com`,
+                amount: amount, // Integer required
                 mobile: `0812${Math.floor(10000000 + Math.random() * 90000000)}`,
-                redirect_url: "https://cendralingo.my.id/shop?status=success",
-                mobile_return_url: "https://cendralingo.my.id/shop?status=success",
+                redirectUrl: "https://cendralingo.my.id/shop?status=success", // CamelCase strictly per docs
+                description: `Trx ${Date.now()}-${Math.floor(Math.random() * 1000)}`, // Random description
+                expiredAt: expiryDate.toISOString(), // REQUIRED field
                 metadata: { userId: userId, type: typeCode, orderId: orderId }
             })
         });
