@@ -57,33 +57,23 @@ export async function GET(req: Request) {
 
         for (const tx of transactions) {
             try {
-                // Extract data from transaction
-                const txId = tx.id || tx.transactionId || "";
-                const status = tx.status || tx.transactionStatus || "";
-                const amount = tx.amount || tx.nettAmount || 0;
-                const extraData = tx.extraData || tx.metadata || {};
+                // Extract data from invoice (tx is an invoice object)
+                const invoiceId = tx.id || "";
+                const invoiceStatus = tx.status || "";
+                const amount = tx.amount || 0;
 
-                // Mayar stores userId and type in external_id with format: "G_userId" or "P_userId"
-                const externalId = tx.external_id || tx.externalId || extraData.orderId || "";
-                const orderId = externalId || txId;
+                // CORRECT PATH: userId and type are in tx.transactions[0].extraData
+                const nestedTx = tx.transactions?.[0] || {};
+                const extraData = nestedTx.extraData || {};
 
-                // Parse external_id to extract type and userId
-                let typeCode = extraData.type || "";
-                let userId = extraData.userId || "";
+                const userId = extraData.userId || "";
+                const typeCode = extraData.type || "";
+                const orderId = extraData.orderId || invoiceId;
 
-                // Try parsing from external_id if format is "TYPE_USERID"
-                if ((!typeCode || !userId) && externalId && externalId.includes("_")) {
-                    const parts = externalId.split("_");
-                    if (parts.length >= 2) {
-                        typeCode = parts[0]; // G or P
-                        userId = parts[1];   // userId
-                    }
-                }
-
-                console.log(`[POLL] Processing tx: ${orderId}, status: ${status}, type: ${typeCode}, userId: ${userId}, amount: ${amount}`);
+                console.log(`[POLL] Processing invoice: ${invoiceId}, status: ${invoiceStatus}, type: ${typeCode}, userId: ${userId}, amount: ${amount}`);
 
                 // Skip non-success transactions
-                if (!["SUCCESS", "PAID", "SETTLED", "success", "paid", "settled"].includes(String(status).toUpperCase())) {
+                if (!["SUCCESS", "PAID", "SETTLED", "success", "paid", "settled"].includes(String(invoiceStatus).toUpperCase())) {
                     skipped++;
                     continue;
                 }
@@ -104,7 +94,7 @@ export async function GET(req: Request) {
                 // Insert transaction
                 await tursoExecute(
                     "INSERT INTO transactions (order_id, user_id, gross_amount, status, payment_type, transaction_time, json_data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    [orderId, userId || "unknown", amount, status, "MAYAR", new Date().toISOString(), JSON.stringify(tx), Date.now()]
+                    [orderId, userId || "unknown", amount, invoiceStatus, "MAYAR", new Date().toISOString(), JSON.stringify(tx), Date.now()]
                 );
 
                 // Update user based on type
