@@ -516,13 +516,20 @@ async function postVouchersRedeem(req: Request) {
 // --------------------------------------------------------------------------------
 async function postWebhookMayar(req: Request) {
     try {
+        // DIAGNOSTIC: Log raw request info
+        const contentType = req.headers.get("Content-Type") || "MISSING";
+        console.log("[WEBHOOK DEBUG] Content-Type:", contentType);
+        console.log("[WEBHOOK DEBUG] Headers:", JSON.stringify(Object.fromEntries(req.headers.entries())));
+
         let body: any = {};
         try {
             const text = await req.text();
+            console.log("[WEBHOOK DEBUG] Raw Body (first 500 chars):", text?.substring(0, 500));
             if (text) body = JSON.parse(text);
         } catch (e) {
             console.warn("Webhook Body Parse Error (Non-JSON?):", e);
         }
+        console.log("[WEBHOOK DEBUG] Parsed Body Keys:", Object.keys(body));
 
         let actualData = body;
         if (body.data && typeof body.data === 'object') {
