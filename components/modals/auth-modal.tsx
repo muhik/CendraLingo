@@ -45,7 +45,12 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose, isProFlow }:
         setIsLoading(true);
 
         const endpoint = mode === "register" ? "/api/auth/register" : "/api/auth/login";
-        const payload = formData;
+
+        // Include guestId and progress when guest is registering
+        const { isGuest } = useUserProgress.getState();
+        const payload = mode === "register" && isGuest
+            ? { ...formData, guestId: userId, guestPoints: points, guestHearts: hearts }
+            : formData;
 
         try {
             const res = await fetch(endpoint, {

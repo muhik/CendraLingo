@@ -57,7 +57,7 @@ export const useUserProgress = create<UserProgressState>()(
             isCourseCompleted: false, // Initial State
 
             login: (userData?: Partial<UserProgressState>) => set({ isGuest: false, ...userData }),
-            setGuest: (userId: string) => set({ userId, isGuest: true, hearts: 5, points: 0 }),
+            setGuest: (userId: string) => set({ userId, isGuest: true, hearts: 2, points: 3 }),
 
             completeCourse: () => {
                 const { isCourseCompleted } = get();
@@ -172,7 +172,7 @@ export const useUserProgress = create<UserProgressState>()(
             },
 
             refreshUserData: async () => {
-                const { userId } = get();
+                const { userId, isGuest: currentIsGuest } = get();
                 if (!userId) return;
 
                 try {
@@ -180,18 +180,23 @@ export const useUserProgress = create<UserProgressState>()(
                     const data = await res.json();
 
                     if (data.success && data.user) {
+                        // Preserve current isGuest if API returns undefined/null
+                        const newIsGuest = data.user.isGuest !== undefined && data.user.isGuest !== null
+                            ? Boolean(data.user.isGuest)
+                            : currentIsGuest;
+
                         set({
-                            hearts: data.user.hearts,
-                            points: data.user.points,
-                            cashbackBalance: data.user.cashbackBalance,
-                            isGuest: data.user.isGuest,
-                            hasActiveSubscription: data.user.hasActiveSubscription,
-                            completedLessons: data.user.completedLessons || [], // Assuming logic to parse if needed
-                            isCourseCompleted: data.user.isCourseCompleted,
+                            hearts: data.user.hearts ?? get().hearts,
+                            points: data.user.points ?? get().points,
+                            cashbackBalance: data.user.cashbackBalance ?? get().cashbackBalance,
+                            isGuest: newIsGuest,
+                            hasActiveSubscription: Boolean(data.user.hasActiveSubscription),
+                            completedLessons: data.user.completedLessons || get().completedLessons,
+                            isCourseCompleted: Boolean(data.user.isCourseCompleted),
                         });
                     }
                 } catch (error) {
-                    console.error("Fetch failed:", error);
+                    // Silent fail - keep local state
                 }
             },
 

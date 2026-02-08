@@ -66,6 +66,10 @@ export default function ManagerPage() {
     // Data State
     const [vouchers, setVouchers] = useState<Voucher[]>([]);
     const [users, setUsers] = useState<UserData[]>([]);
+    const [userPage, setUserPage] = useState(1);
+    const [userTotalPages, setUserTotalPages] = useState(1);
+    const [userTotalItems, setUserTotalItems] = useState(0);
+    const [userSearch, setUserSearch] = useState("");
     const [generatedVouchers, setGeneratedVouchers] = useState<Voucher[]>([]);
     const [alerts, setAlerts] = useState<any[]>([]);
     const [notifications, setNotifications] = useState<any[]>([]);
@@ -259,9 +263,19 @@ export default function ManagerPage() {
     }
 
     const fetchUsers = () => {
-        fetch("/api/admin/users")
+        const params = new URLSearchParams({
+            page: userPage.toString(),
+            limit: "10",
+        });
+        if (userSearch) params.append("search", userSearch);
+
+        fetch(`/api/admin/users?${params.toString()}`)
             .then(res => res.json())
-            .then(setUsers)
+            .then(data => {
+                setUsers(data.data || []);
+                setUserTotalPages(data.pagination?.totalPages || 1);
+                setUserTotalItems(data.pagination?.totalItems || 0);
+            })
             .catch(console.error);
     };
 
@@ -368,9 +382,15 @@ export default function ManagerPage() {
     }, [isAuthenticated, activeTab, page, startDate, endDate]);
 
     useEffect(() => {
+        if (isAuthenticated && activeTab === "users") {
+            fetchUsers();
+        }
+    }, [isAuthenticated, activeTab, userPage]); // Removed userSearch to avoid debounce issues for now, handled via Enter or Button usually, or we can debounce later. actually let's keep it simple.
+
+    useEffect(() => {
         if (isAuthenticated) {
-            // Fetch Users
-            fetch("/api/admin/users").then(res => res.json()).then(setUsers);
+            // Fetch Users - handled by specific effect above when tab changes or page changes
+            if (activeTab === "users") fetchUsers();
             // Fetch Claims (with pagination)
             fetchClaims();
         }
@@ -1040,7 +1060,13 @@ export default function ManagerPage() {
                             <span>Daftar Pengguna (Real-time Sync)</span>
                             <div className="relative">
                                 <Search className="absolute left-2 top-2 h-4 w-4 text-slate-400" />
-                                <Input placeholder="Cari User..." className="pl-8 w-[200px] bg-white h-8" />
+                                <Input
+                                    placeholder="Cari User..."
+                                    className="pl-8 w-[200px] bg-white h-8"
+                                    value={userSearch}
+                                    onChange={(e) => setUserSearch(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && fetchUsers()}
+                                />
                             </div>
                         </div>
                         <table className="w-full text-left text-sm">
@@ -1130,6 +1156,32 @@ export default function ManagerPage() {
                                 ))}
                             </tbody>
                         </table>
+                        <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+                            <span className="text-xs text-slate-500">
+                                Total: <strong>{userTotalItems}</strong> pengguna
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={userPage === 1}
+                                    onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                                >
+                                    Prev
+                                </Button>
+                                <span className="text-xs font-bold text-slate-500">
+                                    Page {userPage} of {userTotalPages}
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={userPage >= userTotalPages}
+                                    onClick={() => setUserPage(p => Math.min(userTotalPages, p + 1))}
+                                >
+                                    Next
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 )
             }

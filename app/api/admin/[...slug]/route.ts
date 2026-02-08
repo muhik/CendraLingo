@@ -101,13 +101,46 @@ async function getTreasureSettings() {
     }
 }
 
-async function getUsers() {
+async function getUsers(req: Request) {
     try {
-        const rows = await tursoQuery(`
+        const { searchParams } = new URL(req.url);
+        const page = parseInt(searchParams.get("page") || "1");
+        const limit = parseInt(searchParams.get("limit") || "10");
+        const search = searchParams.get("search") || "";
+        const offset = (page - 1) * limit;
+
+        let query = `
             SELECT up.*, u.email 
             FROM user_progress up 
             LEFT JOIN users u ON up.user_id = u.id
-        `);
+        `;
+        const args: any[] = [];
+
+        if (search) {
+            query += " WHERE up.user_name LIKE ? OR u.email LIKE ? OR up.user_id LIKE ?";
+            args.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
+
+        query += " ORDER BY up.hearts DESC LIMIT ? OFFSET ?";
+        args.push(limit, offset);
+
+        const rows = await tursoQuery(query, args);
+
+        // Count Total
+        let countQuery = `
+            SELECT COUNT(*) as total 
+            FROM user_progress up 
+            LEFT JOIN users u ON up.user_id = u.id
+        `;
+        const countArgs: any[] = [];
+        if (search) {
+            countQuery += " WHERE up.user_name LIKE ? OR u.email LIKE ? OR up.user_id LIKE ?";
+            countArgs.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
+
+        const countResult = await tursoQuery(countQuery, countArgs);
+        const totalItems = countResult[0]?.total || 0;
+        const totalPages = Math.ceil(totalItems / limit);
 
         // Map to camelCase
         const users = rows.map((u: any) => ({
@@ -124,9 +157,12 @@ async function getUsers() {
             cashbackBalance: u.cashback_balance || 0
         }));
 
-        return NextResponse.json(users);
+        return NextResponse.json({
+            data: users,
+            pagination: { page, limit, totalItems, totalPages }
+        });
     } catch (e) {
-        return NextResponse.json([], { status: 500 });
+        return NextResponse.json({ data: [], error: String(e) }, { status: 500 });
     }
 }
 
@@ -300,7 +336,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
         case "feedback": return getFeedback(req);
         case "redeem": return getRedeem(req);
         case "treasure-settings": return getTreasureSettings();
-        case "users": return getUsers();
+        case "users": return getUsers(req);
         case "vouchers": return getVouchers(req);
         case "security/logs": return getSecurityLogs(req);
         default: return new NextResponse("Not Found", { status: 404 });

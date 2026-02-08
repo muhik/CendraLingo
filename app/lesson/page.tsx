@@ -88,7 +88,10 @@ function LessonContent() {
     const isCourseFinished = lastLessonOfCourse.id === lessonId;
 
     // AUTO NOTIFICATION TRIGGER & REDIRECT
+    // AUTO NOTIFICATION TRIGGER & REDIRECT
     useEffect(() => {
+        if (isGuest) return; // NEVER AUTO REDIRECT GUESTS
+
         if (completed && isCourseFinished && !isCourseCompleted) {
             completeCourse(); // Fire and forget notification
 
@@ -103,7 +106,7 @@ function LessonContent() {
                 router.push("/learn");
             }, 2000);
         }
-    }, [completed, isCourseFinished, isCourseCompleted, completeCourse, router]);
+    }, [completed, isCourseFinished, isCourseCompleted, completeCourse, router, isGuest]);
 
 
 
@@ -306,6 +309,14 @@ function LessonContent() {
 
         return (
             <div className="flex flex-col h-screen items-center justify-center p-6 bg-white animate-in fade-in duration-500">
+                {/* AuthModal for Guest Registration - MUST be here since completion screen has early return */}
+                <AuthModal
+                    open={showAuthModal}
+                    setOpen={setShowAuthModal}
+                    onSuccess={() => router.push("/learn")}
+                    preventClose={isGuest}
+                />
+
                 <div className="flex-1 flex flex-col items-center justify-center w-full max-w-sm gap-y-8">
 
                     {/* Mascot Image */}
@@ -383,8 +394,8 @@ function LessonContent() {
                         </div>
                     </div>
 
-                    {/* MANAGER NOTIFICATION LOGIC (AUTO & REDIRECT) */}
-                    {isCourseFinished && (
+                    {/* MANAGER NOTIFICATION LOGIC (AUTO & REDIRECT) - ONLY FOR REGISTERED USERS */}
+                    {isCourseFinished && !isGuest && (
                         <div className="w-full max-w-sm mt-8 border-t-2 border-slate-100 pt-8 animate-in fade-in zoom-in duration-500 delay-300">
                             <div className="flex flex-col items-center gap-4">
                                 <div className="bg-slate-100 p-6 rounded-2xl border-2 border-slate-200 w-full text-center shadow-sm">
@@ -398,8 +409,8 @@ function LessonContent() {
                         </div>
                     )}
 
-                    {/* NORMAL FLOW (NOT FINISHED) */}
-                    {!isCourseFinished && (
+                    {/* MANUAL BUTTON FLOW (GUEST OR NOT FINISHED) */}
+                    {(isGuest || !isCourseFinished) && (
                         <div className="w-full max-w-sm mt-8 border-t-2 border-slate-100 pt-8">
                             <Button
                                 size="lg"
@@ -412,7 +423,7 @@ function LessonContent() {
                                     }
                                 }}
                             >
-                                Lanjutkan
+                                {isGuest ? "Buat Akun untuk Simpan Progress" : "Lanjutkan"}
                             </Button>
                         </div>
                     )}
@@ -689,6 +700,28 @@ function LessonContent() {
                             activeChallenge.type === "MATCH" ? status !== "correct" :
                                 activeChallenge.type === "SPEAK" ? status !== "correct" : false
                 }
+            />
+            {/* Assuming HeartsModal would be rendered here if it existed,
+                or AuthModal should be placed after Footer as per the instruction's context. */}
+            {/* <HeartsModal ... /> */}
+            {/* The provided snippet for AuthModal seems to be a bit out of context,
+                but placing it here as requested after the Footer.
+                Note: The original code does not define `showAuthModal`, `setShowAuthModal`, or `router`.
+                These would need to be defined in the LessonContent component for AuthModal to work. */}
+            {/* <AuthModal
+                open={showAuthModal}
+                setOpen={setShowAuthModal}
+                onSuccess={() => {
+                    // Update user state if needed, then direct
+                    router.push("/learn");
+                }}
+            /> */}
+            {/* AuthModal placed here for easy access */}
+            <AuthModal
+                open={showAuthModal}
+                setOpen={setShowAuthModal}
+                onSuccess={() => router.push("/learn")}
+                preventClose={isGuest}
             />
         </div >
     );

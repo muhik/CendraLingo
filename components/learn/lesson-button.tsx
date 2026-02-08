@@ -64,16 +64,13 @@ export const LessonButton = ({
     if (locked) Icon = Lock;
     if (isCompleted && !isLast) Icon = Check;
 
-    // Get login function from store
-    const { login, isGuest } = useUserProgress();
+    // Get isGuest state from store (login removed - guest stays guest until lesson completion)
+    const { isGuest } = useUserProgress();
 
     const handleClick = () => {
         // Allow clicking if current (active) or completed (review)
         if (current || isCompleted || (isLast && !locked)) {
-            // If guest and clicking START (current), convert to registered user
-            if (isGuest && current) {
-                login(); // Sets isGuest = false
-            }
+            // Guest stays guest - registration is prompted AFTER lesson completion
             onClick(id, isCompleted, isLast);
         }
     };

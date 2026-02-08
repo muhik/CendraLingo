@@ -34,23 +34,52 @@ export default function Home() {
   };
   const handleStartLearning = async () => {
     try {
-      // Call API to create guest session in DB
-      const res = await fetch("/api/auth/guest", { method: "POST" });
+      // Generate a simple browser fingerprint for anti-abuse
+      const getFingerprint = (): string => {
+        // Check if we already have one in localStorage
+        const existing = localStorage.getItem("_gfp");
+        if (existing) return existing;
+
+        // Generate new fingerprint based on browser characteristics
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        ctx?.fillText("fp", 10, 10);
+        const canvasData = canvas.toDataURL();
+
+        const fp = btoa(
+          navigator.userAgent +
+          navigator.language +
+          screen.width + "x" + screen.height +
+          new Date().getTimezoneOffset() +
+          canvasData.substring(0, 50)
+        ).substring(0, 32);
+
+        localStorage.setItem("_gfp", fp);
+        return fp;
+      };
+
+      const fingerprint = getFingerprint();
+
+      // Call API with fingerprint header
+      const res = await fetch("/api/auth/guest", {
+        method: "POST",
+        headers: {
+          "x-guest-fingerprint": fingerprint
+        }
+      });
       const data = await res.json();
 
       if (data.success && data.userId) {
-        // Update Local State with the SERVER ID
-        setGuest(data.userId); // Use the setGuest function from the store
+        setGuest(data.userId);
       }
       router.push("/learn");
     } catch (e) {
-      console.error(e);
       router.push("/learn"); // Fallback
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#022c22] text-white overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-[#022c22] text-white overflow-hidden" suppressHydrationWarning>
 
       {/* Navbar */}
       <header className="fixed w-full top-0 z-50 border-b border-white/10 bg-background-dark/80 backdrop-blur-md">
@@ -158,7 +187,7 @@ export default function Home() {
               <Button
                 size="lg"
                 className="w-full md:w-auto font-black text-lg bg-[#58cc02] hover:bg-[#46a302] text-[#102216] border-b-4 border-[#46a302] active:border-b-0 active:translate-y-1 transition-all rounded-xl h-14 px-10 shadow-xl shadow-green-500/20"
-                onClick={() => setShowAuthModal(true)}
+                onClick={handleStartLearning}
               >
                 START GAME
                 <ArrowRight className="ml-2 h-5 w-5 stroke-[3]" />

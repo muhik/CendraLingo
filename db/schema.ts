@@ -21,6 +21,7 @@ export const userProgress = sqliteTable("user_progress", {
     hasActiveSubscription: integer("has_active_subscription", { mode: "boolean" }).notNull().default(false),
     subscriptionEndsAt: integer("subscription_ends_at", { mode: "timestamp" }),
     lastSpinDate: text("last_spin_date"),
+    completedLessons: text("completed_lessons", { mode: "json" }).$type<number[]>().default([]),
     isCourseCompleted: integer("is_course_completed", { mode: "boolean" }).notNull().default(false),
 });
 

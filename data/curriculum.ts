@@ -98,63 +98,50 @@ Kita akan belajar berhitung 1-20 dan mengenal warna-warni dasar seperti **Red**,
                 id: 101, unitId: 1, order: 1, title: "Greetings", type: "STAR",
                 challenges: [
                     {
-                        id: 1020, type: "SPEAK", question: "Ucapkan kalimat ini:",
-                        correctSentence: "Hello",
-                        audioQuestion: "Hello",
-                        storyContext: { // Using storyContext for consistency or new direct prop if easier
-                            image: "/girl_headphone.png",
-                            video: "/CendraLingo.mp4",
-                            speaker: "Girl",
-                            text: "Hello!"
-                        }
-                    },
-                    {
-                        id: 1011, type: "SELECT", question: "Apa arti 'Hello'?",
+                        id: 1011, type: "SELECT", question: "Bahasa Inggris 'Halo'?",
                         options: [
-                            { id: 1, text: "Halo", correct: true, audio: "Hello" },
-                            { id: 2, text: "Dah", correct: false, audio: "Bye" },
-                            { id: 3, text: "Pagi", correct: false, audio: "Morning" }
+                            { id: 1, text: "Hello", correct: true, audio: "Hello" },
+                            { id: 2, text: "Goodbye", correct: false, audio: "Goodbye" },
+                            { id: 3, text: "Thank You", correct: false, audio: "Thank You" }
                         ]
                     },
                     {
-                        id: 1012, type: "MATCH", question: "Pasangkan sapaan",
+                        id: 1012, type: "ASSIST", question: "Terjemahkan: 'Selamat Pagi'",
+                        initialWords: ["Good", "Morning", "Night", "Hello", "Bye"],
+                        correctSentence: "Good Morning"
+                    },
+                    {
+                        id: 1013, type: "MATCH", question: "Pasangkan kata berikut:",
                         pairs: [
                             { from: "Hello", to: "Halo" },
                             { from: "Good Morning", to: "Selamat Pagi" },
-                            { from: "Hi", to: "Hai" },
-                            { from: "Good Night", to: "Selamat Malam" },
-                            { from: "Bye", to: "Dah" }
-                        ]
-                    },
-                    {
-                        id: 1013, type: "ASSIST", question: "Terjemahkan: 'Nama saya Budi'",
-                        initialWords: ["My", "name", "is", "Budi", "you", "are"],
-                        correctSentence: "My name is Budi",
-                        audioQuestion: "My name is Budi"
-                    },
-                    {
-                        id: 1014, type: "SELECT", question: "Apa arti 'Good Night'?",
-                        options: [
-                            { id: 1, text: "Selamat Malam", correct: true },
-                            { id: 2, text: "Selamat Pagi", correct: false },
-                            { id: 3, text: "Selamat Siang", correct: false }
-                        ]
-                    },
-                    {
-                        id: 1015, type: "MATCH", question: "Pasangkan kata",
-                        pairs: [
                             { from: "Name", to: "Nama" },
-                            { from: "Is", to: "Adalah" },
                             { from: "My", to: "Saya (Milik)" },
-                            { from: "You", to: "Kamu" },
+                            { from: "Is", to: "Adalah" }
+                        ]
+                    },
+                    {
+                        id: 1014, type: "SELECT", question: "Apa arti 'Red'?",
+                        options: [
+                            { id: 1, text: "Merah", correct: true },
+                            { id: 2, text: "Biru", correct: false },
+                            { id: 3, text: "Hijau", correct: false }
+                        ]
+                    },
+                    {
+                        id: 1015, type: "MATCH", question: "Pasangkan Angka",
+                        pairs: [
+                            { from: "One", to: "Satu" },
+                            { from: "Two", to: "Dua" },
+                            { from: "Three", to: "Tiga" },
                             { from: "Good", to: "Baik" }
                         ]
                     },
                     {
                         id: 1016, type: "LISTEN", question: "Tulis apa yang Anda dengar:",
-                        audioQuestion: "Good morning",
-                        initialWords: ["Good", "morning", "night", "hello"],
-                        correctSentence: "Good morning"
+                        audioQuestion: "My name is Budi",
+                        initialWords: ["My", "name", "is", "Budi", "you", "are"],
+                        correctSentence: "My name is Budi"
                     },
                     {
                         id: 1017, type: "ASSIST", question: "Susun: 'Halo nama saya Andi'",
@@ -171,11 +158,10 @@ Kita akan belajar berhitung 1-20 dan mengenal warna-warni dasar seperti **Red**,
                     },
                     {
                         id: 1019, type: "LISTEN", question: "Dengarkan:",
-                        audioQuestion: "My name is John",
-                        initialWords: ["My", "name", "is", "John", "you", "are"],
-                        correctSentence: "My name is John"
+                        audioQuestion: "Good morning",
+                        initialWords: ["Good", "morning", "night", "hello"],
+                        correctSentence: "Good morning"
                     },
-                    // NEW SENTENCE GAMES
                     {
                         id: 10110, type: "SELECT", question: "Pilih kata yang hilang: '_____ morning.'",
                         options: [
@@ -199,6 +185,8 @@ Kita akan belajar berhitung 1-20 dan mengenal warna-warni dasar seperti **Red**,
                     }
                 ]
             },
+            // TEMPORARILY DISABLED FOR TESTING (Guest Flow: 1 Block Only)
+            /*
             // Block 2: Personal Pronouns (EXPANDED ~9 Questions)
             {
                 id: 102, unitId: 1, order: 2, title: "Subject Pronouns", type: "VIDEO",
@@ -631,6 +619,7 @@ Kita akan belajar berhitung 1-20 dan mengenal warna-warni dasar seperti **Red**,
                     }
                 ]
             }
+            */
         ]
     },
 
@@ -643,27 +632,27 @@ Kita akan belajar berhitung 1-20 dan mengenal warna-warni dasar seperti **Red**,
         description: "Keluarga, Rumah, Hewan, Sifat, Emosi",
         guidebookContent: `
 # My World 🌍
-
+ 
 Mari bercerita tentang dunia kita!
-
+ 
 ## 1. Family (Keluarga)
 - **Mother** / **Mom** = Ibu
 - **Father** / **Dad** = Ayah
 - **Brother** = Saudara Laki-laki
 - **Sister** = Saudara Perempuan
-
+ 
 ## 2. My House (Rumahku)
 Ruangan di rumah:
 - **Kitchen** = Dapur
 - **Bedroom** = Kamar Tidur
 - **Bathroom** = Kamar Mandi
-
+ 
 ## 3. Emotions (Emosi)
 - **Happy** 😄
 - **Sad** 😢
 - **Angry** 😡
 - **Tired** 😴
-        `,
+`,
         lessons: [
             // Block 1: Family Members
             {
@@ -1081,23 +1070,23 @@ Ruangan di rumah:
         description: "Makanan, Minuman, Rasa, Memesan",
         guidebookContent: `
 # Food & Drink 🍔
-
+ 
 Enaknya makan apa ya?
-
+ 
 ## 1. Meals (Waktu Makan)
 - **Breakfast** = Sarapan 🌅
 - **Lunch** = Makan Siang ☀️
 - **Dinner** = Makan Malam 🌙
-
+ 
 ## 2. Ordering (Memesan)
 Gunakan **"I would like..."** agar lebih sopan daripada "I want".
 - "I would like fried rice, please."
-
+ 
 ## 3. Tastes (Rasa)
 - **Sweet** = Manis
 - **Spicy** = Pedas 🌶️
 - **Salty** = Asin
-        `,
+`,
         lessons: [
             // Block 1: Fruits & Veggies
             {
@@ -1394,22 +1383,22 @@ Gunakan **"I would like..."** agar lebih sopan daripada "I want".
         description: "Jam, Hari, Rutinitas Pagi, Sekolah/Kerja",
         guidebookContent: `
 # Time & Routine ⏰
-
+ 
 Mengatur waktu itu penting! 
-
+ 
 ## 1. Days (Hari)
 - Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday.
-
+ 
 ## 2. Telling Time (Jam)
 - **7:00** = Seven o'clock
 - **7:30** = Half past seven
-
+ 
 ## 3. Frequency (Seberapa Sering)
 - **Always** = Selalu (100%)
 - **Usually** = Biasanya (80%)
 - **Sometimes** = Kadang-kadang (50%)
 - **Never** = Tidak pernah (0%)
-        `,
+`,
         lessons: [
             // Block 1: Days
             {
@@ -1499,25 +1488,25 @@ Mengatur waktu itu penting!
         description: "Tempat, Transportasi, Arah, Cuaca",
         guidebookContent: `
 # Travel & City ✈️
-
+ 
 Ayo jalan-jalan!
-
+ 
 ## 1. Places (Tempat)
 - **School** = Sekolah
 - **Hospital** = Rumah Sakit
 - **Bank** = Bank
 - **Airport** = Bandara
-
+ 
 ## 2. Directions (Arah)
 - **Turn Left** = Belok Kiri ⬅️
 - **Turn Right** = Belok Kanan ➡️
 - **Go Straight** = Lurus ⬆️
-
+ 
 ## 3. Weather (Cuaca)
 - **Sunny** = Cerah ☀️
 - **Rainy** = Hujan 🌧️
 - **SNowy** = Bersalju ❄️
-        `,
+`,
         lessons: [
             // Block 1: Places
             {
@@ -1607,25 +1596,25 @@ Ayo jalan-jalan!
         description: "Belanja, Baju, Ukuran, Harga",
         guidebookContent: `
 # Shopping & Style 🛍️
-
+ 
 Waktunya belanja!
-
+ 
 ## 1. Clothes (Pakaian)
 - **Shirt** = Kemeja 👔
 - **Pants** = Celana 👖
 - **Shoes** = Sepatu 👞
 - **Dress** = Gaun 👗
-
+ 
 ## 2. Sizes (Ukuran)
 - **Small** (S) = Kecil
 - **Medium** (M) = Sedang
 - **Large** (L) = Besar
-
+ 
 ## 3. At the Store (Di Toko)
 - **"How much is this?"** = Berapa harganya?
 - **Expensive** = Mahal 💰
 - **Cheap** = Murah 🏷️
-        `,
+`,
         lessons: [
             // Block 1: Clothes
             {
@@ -1711,24 +1700,24 @@ Waktunya belanja!
         description: "Olahraga, Musik, Film, Kemampuan",
         guidebookContent: `
 # Hobbies & Interests 🎨
-
+ 
 Apa hobi kamu?
-
+ 
 ## 1. Sports (Olahraga)
 - **Soccer** = Sepakbola ⚽
 - **Basketball** = Basket 🏀
 - **Swimming** = Renang 🏊
-
+ 
 ## 2. Abilities (Kemampuan)
 Gunakan **Can** (Bisa) dan **Cannot/Can't** (Tidak bisa).
 - "I can swim" (Saya bisa renang)
 - "I cannot dance" (Saya tidak bisa menari)
-
+ 
 ## 3. Likes (Kesukaan)
 - **Love** = Sangat suka ❤️
 - **Like** = Suka 👍
 - **Hate** = Benci 👎
-        `,
+`,
         lessons: [
             // Block 1: Sports
             {
@@ -1813,24 +1802,24 @@ Gunakan **Can** (Bisa) dan **Cannot/Can't** (Tidak bisa).
         description: "Anggota Tubuh, Gejala Sakit, Dokter",
         guidebookContent: `
 # Health & Body 🏥
-
+ 
 Jaga kesehatanmu!
-
+ 
 ## 1. Body Parts (Tubuh)
 - **Head** = Kepala
 - **Hand** = Tangan
 - **Stomach** = Perut
 - **Leg** = Kaki
-
+ 
 ## 2. Symptoms (Gejala)
 - **Headache** = Sakit kepala 🤕
 - **Fever** = Demam 🤒
 - **Cough** = Batuk 😷
-
+ 
 ## 3. Pharmacy (Apotek)
 - **Medicine** = Obat 💊
 - **Vitamin** = Vitamin
-        `,
+`,
         lessons: [
             // Block 1: Body Parts
             {
@@ -1921,26 +1910,26 @@ Jaga kesehatanmu!
         description: "Masa Lalu, Kemarin, Cerita Liburan",
         guidebookContent: `
 # My Past (Masa Lalu) 🕰️
-
+ 
 Belajar menceritakan apa yang SUDAH terjadi.
-
+ 
 ## 1. Past Time (Waktu Lampau)
 - **Yesterday** = Kemarin
 - **Last night** = Tadi malam
 - **Last week** = Minggu lalu
-
+ 
 ## 2. Regular Verbs (+ed)
 Banyak kata kerja tinggal ditambah **-ed**:
 - Walk -> **Walked** (Berjalan)
 - Cook -> **Cooked** (Memasak)
 - Play -> **Played** (Bermain)
-
+ 
 ## 3. Irregular Verbs (Tidak Beraturan)
 Hati-hati! Kata-kata ini berubah total:
 - Go -> **Went** (Pergi)
 - Eat -> **Ate** (Makan)
 - Sleep -> **Slept** (Tidur)
-        `,
+`,
         lessons: [
             // Block 1: Yesterday
             {
@@ -2025,22 +2014,22 @@ Hati-hati! Kata-kata ini berubah total:
         description: "Masa Depan, Rencana, Cita-cita",
         guidebookContent: `
 # Future Plans 🚀
-
+ 
 Apa rencanamu besok?
-
+ 
 ## 1. Future Time (Waktu Depan)
 - **Tomorrow** = Besok
 - **Next week** = Minggu depan
 - **Tonight** = Malam ini
-
+ 
 ## 2. Will vs Going to
 - **Will**: Janji / Spontan ("I will help you")
 - **Going to**: Rencana pasti ("I am going to Bali")
-
+ 
 ## 3. Dreams (Cita-cita)
 - "I want to be a pilot" (Saya ingin jadi pilot)
 - "I will be rich" (Saya akan kaya)
-        `,
+`,
         lessons: [
             // Block 1: Next Week
             {
