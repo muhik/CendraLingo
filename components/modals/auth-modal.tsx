@@ -220,11 +220,11 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose, isProFlow }:
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                         {mode === "register" && (
                             <div className="space-y-2">
-                                <Label htmlFor="name">Name</Label>
+                                <Label htmlFor="name">Nickname</Label>
                                 <Input
                                     id="name"
                                     name="name"
-                                    placeholder="Your Name"
+                                    placeholder="Your Nickname"
                                     value={formData.name}
                                     onChange={handleChange}
                                     required
@@ -282,7 +282,7 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose, isProFlow }:
                             disabled={isLoading}
                         >
                             {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                            {mode === "login" ? "LOG IN" : "START LEARNING"}
+                            {mode === "login" ? "LOG IN" : "START GAME"}
                         </Button>
                     </form>
                 </div>

@@ -160,7 +160,7 @@ export default function Home() {
                 className="w-full md:w-auto font-black text-lg bg-[#58cc02] hover:bg-[#46a302] text-[#102216] border-b-4 border-[#46a302] active:border-b-0 active:translate-y-1 transition-all rounded-xl h-14 px-10 shadow-xl shadow-green-500/20"
                 onClick={() => setShowAuthModal(true)}
               >
-                START LEARNING
+                START GAME
                 <ArrowRight className="ml-2 h-5 w-5 stroke-[3]" />
               </Button>
               <Button

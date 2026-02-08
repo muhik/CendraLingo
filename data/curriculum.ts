@@ -289,9 +289,9 @@ Kita akan belajar berhitung 1-20 dan mengenal warna-warni dasar seperti **Red**,
                     }
                 ]
             },
-            // Block 3: Numbers 1-20 (EXPANDED ~9 Questions)
+            // Block 3: Numbers 1-10 (EXPANDED ~9 Questions)
             {
-                id: 103, unitId: 1, order: 3, title: "Numbers 1-20", type: "PRACTICE",
+                id: 103, unitId: 1, order: 3, title: "Numbers 1-10", type: "PRACTICE",
                 challenges: [
                     {
                         id: 1031, type: "MATCH", question: "Berhitung 1-5",
@@ -380,9 +380,9 @@ Kita akan belajar berhitung 1-20 dan mengenal warna-warni dasar seperti **Red**,
                     }
                 ]
             },
-            // Block 4: Colors & Shapes (EXPANDED ~8 Questions)
+            // Block 4: Colors (EXPANDED ~8 Questions)
             {
-                id: 104, unitId: 1, order: 4, title: "Colors & Shapes", type: "STORY",
+                id: 104, unitId: 1, order: 4, title: "Colors", type: "STORY",
                 challenges: [
                     {
                         id: 1041, type: "SELECT", question: "Warna 'Merah'?",
@@ -539,6 +539,95 @@ Kita akan belajar berhitung 1-20 dan mengenal warna-warni dasar seperti **Red**,
                         id: 10510, type: "ASSIST", question: "Lengkapi: 'Ini adalah komputer'",
                         initialWords: ["This", "is", "a", "computer", "am"],
                         correctSentence: "This is a computer"
+                    }
+                ]
+            },
+            // Block 6: Shapes
+            {
+                id: 106, unitId: 1, order: 6, title: "Shapes", type: "STAR",
+                challenges: [
+                    {
+                        id: 1061, type: "MATCH", question: "Bentuk",
+                        pairs: [
+                            { from: "Circle", to: "Lingkaran" },
+                            { from: "Square", to: "Kotak" },
+                            { from: "Triangle", to: "Segitiga" },
+                            { from: "Star", to: "Bintang" },
+                            { from: "Heart", to: "Hati" }
+                        ]
+                    },
+                    {
+                        id: 1062, type: "SELECT", question: "Bentuk 'Segitiga'?",
+                        options: [
+                            { id: 1, text: "Triangle", correct: true },
+                            { id: 2, text: "Square", correct: false },
+                            { id: 3, text: "Circle", correct: false }
+                        ]
+                    },
+                    {
+                        id: 1063, type: "LISTEN", question: "Dengarkan:",
+                        audioQuestion: "It is a circle",
+                        initialWords: ["It", "is", "a", "circle", "square"],
+                        correctSentence: "It is a circle"
+                    }
+                ]
+            },
+            // Block 7: Numbers 11-20
+            {
+                id: 107, unitId: 1, order: 7, title: "Numbers 11-20", type: "PRACTICE",
+                challenges: [
+                    {
+                        id: 1071, type: "MATCH", question: "Angka Besar",
+                        pairs: [
+                            { from: "Eleven", to: "Sebelas" },
+                            { from: "Twelve", to: "Dua belas" },
+                            { from: "Twenty", to: "Dua puluh" },
+                            { from: "Fifteen", to: "Lima belas" },
+                            { from: "Eighteen", to: "Delapan belas" }
+                        ]
+                    },
+                    {
+                        id: 1072, type: "SELECT", question: "Angka '20'?",
+                        options: [
+                            { id: 1, text: "Twenty", correct: true },
+                            { id: 2, text: "Twelve", correct: false },
+                            { id: 3, text: "Two", correct: false }
+                        ]
+                    },
+                    {
+                        id: 1073, type: "ASSIST", question: "Susun: 'Saya punya 11 apel'",
+                        initialWords: ["I", "have", "eleven", "apples", "ten"],
+                        correctSentence: "I have eleven apples"
+                    }
+                ]
+            },
+            // Block 8: Review & Practice
+            {
+                id: 108, unitId: 1, order: 8, title: "Review & Practice", type: "HEADSET", // Chest Icon Logic handles Last Item
+                challenges: [
+                    {
+                        id: 1081, type: "MATCH", question: "Campuran",
+                        pairs: [
+                            { from: "Red", to: "Merah" },
+                            { from: "One", to: "Satu" },
+                            { from: "Hello", to: "Halo" },
+                            { from: "Book", to: "Buku" },
+                            { from: "Mother", to: "Ibu" }
+                        ]
+                    },
+                    {
+                        id: 1082, type: "SELECT", question: "Apa ini?",
+                        options: [
+                            { id: 1, text: "Apple", correct: true },
+                            { id: 2, text: "Car", correct: false },
+                            { id: 3, text: "Dog", correct: false }
+                        ]
+                    },
+                    {
+                        id: 1083, type: "LISTEN", question: "Dengarkan:",
+                        audioQuestion: "Goodbye my friend",
+                        initialWords: ["Goodbye", "my", "friend", "hello"],
+                        correctSentence: "Goodbye my friend"
                     }
                 ]
             }
@@ -900,6 +989,83 @@ Ruangan di rumah:
                         audioQuestion: "I am happy",
                         initialWords: ["I", "am", "happy", "sad"],
                         correctSentence: "I am happy"
+                    }
+                ]
+            },
+            // Block 6: Daily Routine (New)
+            {
+                id: 206, unitId: 2, order: 6, title: "Daily Routine", type: "VIDEO",
+                challenges: [
+                    {
+                        id: 2061, type: "MATCH", question: "Kegiatan Harian",
+                        pairs: [
+                            { from: "Wake up", to: "Bangun" },
+                            { from: "Sleep", to: "Tidur" },
+                            { from: "Eat", to: "Makan" },
+                            { from: "Drink", to: "Minum" },
+                            { from: "Work", to: "Kerja" }
+                        ]
+                    },
+                    {
+                        id: 2062, type: "SELECT", question: "Saya bangun pagi...",
+                        options: [
+                            { id: 1, text: "I wake up", correct: true },
+                            { id: 2, text: "I sleep", correct: false },
+                            { id: 3, text: "I eat", correct: false }
+                        ]
+                    },
+                    {
+                        id: 2063, type: "ASSIST", question: "Susun: 'Saya tidur malam'",
+                        initialWords: ["I", "sleep", "at", "night", "morning"],
+                        correctSentence: "I sleep at night"
+                    }
+                ]
+            },
+            // Block 7: Feelings & Emotions 2
+            {
+                id: 207, unitId: 2, order: 7, title: "More Feelings", type: "STAR",
+                challenges: [
+                    {
+                        id: 2071, type: "MATCH", question: "Emosi Lain",
+                        pairs: [
+                            { from: "Scared", to: "Takut" },
+                            { from: "Excited", to: "Bersemangat" },
+                            { from: "Bored", to: "Bosan" },
+                            { from: "Hungry", to: "Lapar" },
+                            { from: "Thirsty", to: "Haus" }
+                        ]
+                    },
+                    {
+                        id: 2072, type: "SELECT", question: "Saya lapar...",
+                        options: [
+                            { id: 1, text: "I am hungry", correct: true },
+                            { id: 2, text: "I am thirsty", correct: false },
+                            { id: 3, text: "I am full", correct: false }
+                        ]
+                    }
+                ]
+            },
+            // Block 8: Review My World
+            {
+                id: 208, unitId: 2, order: 8, title: "Review: My World", type: "HEADSET",
+                challenges: [
+                    {
+                        id: 2081, type: "MATCH", question: "Review Unit 2",
+                        pairs: [
+                            { from: "Mother", to: "Ibu" },
+                            { from: "House", to: "Rumah" },
+                            { from: "Cat", to: "Kucing" },
+                            { from: "Happy", to: "Senang" },
+                            { from: "Sleep", to: "Tidur" }
+                        ]
+                    },
+                    {
+                        id: 2082, type: "SELECT", question: "Dimana Ayah?",
+                        options: [
+                            { id: 1, text: "Where is Father?", correct: true },
+                            { id: 2, text: "Who is Father?", correct: false },
+                            { id: 3, text: "When is Father?", correct: false }
+                        ]
                     }
                 ]
             }
