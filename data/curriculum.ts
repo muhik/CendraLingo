@@ -185,8 +185,6 @@ Kita akan belajar berhitung 1-20 dan mengenal warna-warni dasar seperti **Red**,
                     }
                 ]
             },
-            // TEMPORARILY DISABLED FOR TESTING (Guest Flow: 1 Block Only)
-            /*
             // Block 2: Personal Pronouns (EXPANDED ~9 Questions)
             {
                 id: 102, unitId: 1, order: 2, title: "Subject Pronouns", type: "VIDEO",
@@ -619,7 +617,6 @@ Kita akan belajar berhitung 1-20 dan mengenal warna-warni dasar seperti **Red**,
                     }
                 ]
             }
-            */
         ]
     },
 
