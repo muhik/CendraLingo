@@ -25,6 +25,7 @@ import { StreakAnimation } from "@/components/lesson/streak-animation";
 import { CorrectFlashAnimation } from "@/components/lesson/correct-flash";
 import { ChallengeSpeak } from "@/components/lesson/challenge-speak";
 import { AuthModal } from "@/components/modals/auth-modal"; // Import AuthModal
+import { trackPixelEvent } from "@/components/analytics/facebook-pixel";
 
 function LessonContent() {
     const router = useRouter();
@@ -37,6 +38,11 @@ function LessonContent() {
     const [status, setStatus] = useState<"none" | "correct" | "wrong">("none");
 
     const [startTime] = useState(Date.now());
+
+    // Track ViewContent on Mount
+    useEffect(() => {
+        trackPixelEvent("ViewContent", { content_name: `Lesson ${lessonId}`, content_ids: [lessonId], content_type: 'product' });
+    }, [lessonId]);
     const [endTime, setEndTime] = useState(Date.now());
     const [correctCount, setCorrectCount] = useState(0);
     const [wrongCount, setWrongCount] = useState(0);
@@ -191,6 +197,9 @@ function LessonContent() {
                 addPoints(totalReward); // Award Gems
                 completeLesson(lessonId);
                 playCorrectSound();
+
+                // Track Lead (Lesson Completed)
+                trackPixelEvent("Lead", { content_name: `Lesson ${lessonId}`, value: totalReward, currency: 'GEM' });
 
                 // Trigger Ad (Sporadic System)
                 if (typeof window !== 'undefined') {

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Plus, RefreshCw, ShieldCheck, Users, Ticket, AlertTriangle, Search, Wallet, CheckCircle, XCircle, Settings, Megaphone, Bell, Trash2 } from "lucide-react";
+import { Copy, Plus, RefreshCw, ShieldCheck, Users, Ticket, AlertTriangle, Search, Wallet, CheckCircle, XCircle, Settings, Megaphone, Bell, Trash2, Activity } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -61,7 +61,7 @@ interface Feedback {
 export default function ManagerPage() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [password, setPassword] = useState("");
-    const [activeTab, setActiveTab] = useState<"users" | "vouchers" | "redeem" | "treasure" | "feedback" | "ads" | "security" | "transactions" | "completions">("vouchers");
+    const [activeTab, setActiveTab] = useState<"users" | "vouchers" | "redeem" | "treasure" | "feedback" | "ads" | "security" | "transactions" | "completions" | "analytics">("vouchers");
 
     // Data State
     const [vouchers, setVouchers] = useState<Voucher[]>([]);
@@ -126,6 +126,35 @@ export default function ManagerPage() {
     const [transactions, setTransactions] = useState<any[]>([]);
     const [transPage, setTransPage] = useState(1);
     const [transTotalPages, setTransTotalPages] = useState(1);
+
+    // Analytics State
+    const [fbPixelId, setFbPixelId] = useState("");
+    const [savingSettings, setSavingSettings] = useState(false);
+
+    const fetchSettings = () => {
+        fetch("/api/admin/settings")
+            .then(res => res.json())
+            .then(data => {
+                if (data.facebook_pixel_id) setFbPixelId(data.facebook_pixel_id);
+            })
+            .catch(console.error);
+    };
+
+    const handleSaveSettings = async () => {
+        setSavingSettings(true);
+        try {
+            await fetch("/api/admin/settings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ facebook_pixel_id: fbPixelId })
+            });
+            toast.success("Settings Saved! 💾");
+        } catch (error) {
+            toast.error("Failed to save settings");
+        } finally {
+            setSavingSettings(false);
+        }
+    };
 
     const fetchTransactions = () => {
         fetch(`/api/admin/transactions?page=${transPage}`)
@@ -374,6 +403,12 @@ export default function ManagerPage() {
             fetchTransactions();
         }
     }, [isAuthenticated, activeTab, transPage]);
+
+    useEffect(() => {
+        if (isAuthenticated && activeTab === "analytics") {
+            fetchSettings();
+        }
+    }, [isAuthenticated, activeTab]);
 
     useEffect(() => {
         if (isAuthenticated && activeTab === "vouchers") {
@@ -644,8 +679,50 @@ export default function ManagerPage() {
                     >
                         <Wallet className="mr-2 h-4 w-4" /> Transactions
                     </Button>
+                    <Button
+                        variant={activeTab === "analytics" ? "primary" : "ghost"}
+                        onClick={() => setActiveTab("analytics")}
+                        className="bg-blue-100 text-blue-700 hover:bg-blue-200 ml-2 border border-blue-200"
+                    >
+                        <Activity className="mr-2 h-4 w-4" /> Analytics
+                    </Button>
                 </div>
             </div>
+
+            {/* --- TAB: ANALYTICS --- */}
+            {activeTab === "analytics" && (
+                <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
+                    <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                        <div className="p-3 bg-blue-100 rounded-lg text-blue-600">
+                            <Activity className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-slate-800">Analytics Configuration</h2>
+                            <p className="text-slate-500 text-sm">Manage tracking codes and third-party integrations</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Facebook Pixel ID</label>
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder="e.g. 1234567890"
+                                    value={fbPixelId}
+                                    onChange={(e) => setFbPixelId(e.target.value)}
+                                    className="bg-white"
+                                />
+                                <Button onClick={handleSaveSettings} disabled={savingSettings}>
+                                    {savingSettings ? "Saving..." : "Save"}
+                                </Button>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-2">
+                                ℹ️ Pixel will track: <b>ViewContent</b> (Start Lesson), <b>Lead</b> (Finish Lesson), <b>CompleteRegistration</b> (Sign Up).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* --- TAB: COMPLETIONS / NOTIFICATIONS --- */}
             {activeTab === "completions" && (

@@ -80,6 +80,12 @@ export const AuthModal = ({ open, setOpen, onSuccess, preventClose, isProFlow }:
                 setTimeout(() => {
                     useUserProgress.getState().refreshUserData();
                 }, 100);
+
+                // Track Registration
+                // @ts-ignore
+                import("@/components/analytics/facebook-pixel").then(({ trackPixelEvent }) => {
+                    trackPixelEvent("CompleteRegistration", { value: 0, currency: "USD" });
+                });
             } else {
                 toast.success("Welcome back!");
                 login({

@@ -3,6 +3,10 @@ import { Geist, Geist_Mono, Lexend } from "next/font/google"; // Import Lexend
 import "./globals.css";
 import { Toaster } from "sonner";
 import { AdManager } from "@/components/ads/ad-manager";
+import { FacebookPixel } from "@/components/analytics/facebook-pixel";
+import { db } from "@/db/drizzle";
+import { siteSettings } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,11 +32,15 @@ export const metadata: Metadata = {
   }
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Fetch Pixel ID Server-Side
+  const settings = await db.select().from(siteSettings).where(eq(siteSettings.key, "facebook_pixel_id"));
+  const pixelId = settings[0]?.value || null;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -42,6 +50,7 @@ export default function RootLayout({
         {children}
         <Toaster position="top-center" richColors closeButton theme="light" />
         <AdManager />
+        <FacebookPixel pixelId={pixelId} />
       </body>
     </html>
   );

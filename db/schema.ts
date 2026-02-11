@@ -107,3 +107,10 @@ export const managerNotifications = sqliteTable("manager_notifications", {
     isRead: integer("is_read", { mode: "boolean" }).default(false),
     createdAt: text("created_at").default(new Date().toISOString())
 });
+
+export const siteSettings = sqliteTable("site_settings", {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    key: text("key").notNull().unique(), // e.g. 'facebook_pixel_id'
+    value: text("value"),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).default(new Date()),
+});
