@@ -32,6 +32,10 @@ export const metadata: Metadata = {
   }
 };
 
+import { Suspense } from "react";
+
+// ... imports
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -50,7 +54,9 @@ export default async function RootLayout({
         {children}
         <Toaster position="top-center" richColors closeButton theme="light" />
         <AdManager />
-        <FacebookPixel pixelId={pixelId} />
+        <Suspense fallback={null}>
+          <FacebookPixel pixelId={pixelId} />
+        </Suspense>
       </body>
     </html>
   );
