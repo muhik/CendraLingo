@@ -11,7 +11,7 @@ const config: OpenNextConfig = {
             queue: "dummy",
         },
     },
-    edgeExternals: ["node:crypto", "ws", "@libsql/isomorphic-ws", "@libsql/client"],
+    edgeExternals: ["node:crypto", "ws", "@libsql/isomorphic-ws", "@libsql/client", "@libsql/client/http", "@libsql/client/web"],
     middleware: {
         external: true,
         override: {
