@@ -50,3 +50,7 @@ local.db
 *.db
 *-journal
 
+
+# cloudflare pages
+.wrangler/
+

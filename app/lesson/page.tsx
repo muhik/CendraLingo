@@ -39,9 +39,14 @@ function LessonContent() {
 
     const [startTime] = useState(Date.now());
 
-    // Track ViewContent on Mount
+    // Track ViewContent on Mount & Trigger Start Ad
     useEffect(() => {
         trackPixelEvent("ViewContent", { content_name: `Lesson ${lessonId}`, content_ids: [lessonId], content_type: 'product' });
+
+        // Trigger Interstitial Ad (80% chance via AdManager)
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('lesson_start'));
+        }
     }, [lessonId]);
     const [endTime, setEndTime] = useState(Date.now());
     const [correctCount, setCorrectCount] = useState(0);

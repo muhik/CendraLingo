@@ -44,7 +44,7 @@ export const AdManager = () => {
     // Helper: Trigger Ad Logic
     const tryTriggerAd = (chance: number) => {
         if (hasActiveSubscription) return; // No ads for PRO
-        if (Date.now() - lastAdTime < 60000) return; // Cooldown 1 minute
+        if (Date.now() - lastAdTime < 10000) return; // Aggressive Cooldown: 10 seconds
         if (Math.random() > chance) return; // Failed dice roll
 
         const ad = selectRandomAd('interstitial');
@@ -54,14 +54,14 @@ export const AdManager = () => {
         }
     };
 
-    // Trigger on Route Change (30% chance)
+    // Trigger on Route Change (70% chance - VERY ANNOYING)
     useEffect(() => {
         if (pathname === '/' || pathname.includes('/admin')) {
             setCurrentBanner(null);
             return;
         }
 
-        tryTriggerAd(0.3); // Interstitial chance
+        tryTriggerAd(0.7); // 70% chance on every page load/navigation
 
         // Banner Logic: Always try to show a banner if not PRO
         if (!hasActiveSubscription) {
@@ -72,11 +72,21 @@ export const AdManager = () => {
         }
     }, [pathname, ads, hasActiveSubscription]);
 
-    // Trigger on Custom Event 'lesson_complete'
+    // Trigger on Custom Events
     useEffect(() => {
-        const handleLessonComplete = () => tryTriggerAd(0.8); // 80% chance after lesson
+        // 100% chance after lesson (Reward/Punishment for finishing)
+        const handleLessonComplete = () => tryTriggerAd(1.0);
+
+        // 80% chance BEFORE lesson (Annoying start)
+        const handleLessonStart = () => tryTriggerAd(0.8);
+
         window.addEventListener('lesson_complete', handleLessonComplete);
-        return () => window.removeEventListener('lesson_complete', handleLessonComplete);
+        window.addEventListener('lesson_start', handleLessonStart);
+
+        return () => {
+            window.removeEventListener('lesson_complete', handleLessonComplete);
+            window.removeEventListener('lesson_start', handleLessonStart);
+        };
     }, [ads, hasActiveSubscription]); // Dep on ads to ensure we have them
 
     return (

@@ -12,10 +12,8 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  experimental: {
-    outputFileTracingIncludes: {
-      "/**/*": ["./node_modules/@libsql/**/*"],
-    },
+  outputFileTracingIncludes: {
+    "/**/*": ["./node_modules/@libsql/**/*"],
   },
   eslint: {
     ignoreDuringBuilds: true,
