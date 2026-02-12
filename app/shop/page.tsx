@@ -40,6 +40,25 @@ function ShopContent() {
         const status = searchParams.get("status");
         if (status === "success") {
             toast.success("Pembayaran Berhasil! Memuat data terbaru...", { duration: 4000 });
+
+            // CHECK PIXEL: Was there a pending purchase?
+            if (typeof window !== "undefined") {
+                const pending = localStorage.getItem("pending_pixel_purchase");
+                if (pending) {
+                    try {
+                        const purchaseData = JSON.parse(pending);
+                        // Fire Pixel
+                        import("@/components/analytics/facebook-pixel").then(({ trackPixelEvent }) => {
+                            trackPixelEvent("Purchase", purchaseData);
+                        });
+                        console.log("PIXEL: Fired delayed Purchase event", purchaseData);
+                        localStorage.removeItem("pending_pixel_purchase"); // Clear it
+                    } catch (e) {
+                        console.error("PIXEL: Failed to parse pending purchase", e);
+                    }
+                }
+            }
+
             // Remove query param to prevent toast on refresh
             window.history.replaceState(null, "", window.location.pathname);
 
@@ -166,6 +185,14 @@ function ShopContent() {
             const data = await response.json();
 
             if (data.url) {
+                // Tracking Prep: Save pending purchase info
+                if (typeof window !== "undefined") {
+                    localStorage.setItem("pending_pixel_purchase", JSON.stringify({
+                        value: 49000,
+                        currency: "IDR",
+                        content_name: "Jawara PRO Subscription"
+                    }));
+                }
                 // 2. Redirect to Xendit Payment Page
                 window.location.href = data.url;
             } else {
@@ -254,6 +281,14 @@ function ShopContent() {
             }
 
             if (data.url) {
+                // Tracking Prep: Save pending purchase info
+                if (typeof window !== "undefined") {
+                    localStorage.setItem("pending_pixel_purchase", JSON.stringify({
+                        value: numericPrice,
+                        currency: "IDR",
+                        content_name: `Top Up ${amount} Gems`
+                    }));
+                }
                 // Redirect to Midtrans
                 window.location.href = data.url;
             } else {
@@ -294,6 +329,15 @@ function ShopContent() {
             const data = await res.json();
             if (data.success) {
                 toast.success("Konfirmasi Terkirim! Mohon tunggu verifikasi Admin (Secepatnya).");
+                // TRACK PIXEL: Manual Purchase
+                import("@/components/analytics/facebook-pixel").then(({ trackPixelEvent }) => {
+                    const desc = manualPlanType === "PRO_MONTHLY" ? "Jawara PRO Subscription (Manual)" : "Top Up Gems (Manual)";
+                    trackPixelEvent("Purchase", {
+                        value: manualAmount,
+                        currency: "IDR",
+                        content_name: desc
+                    });
+                });
                 setShowManualModal(false);
             } else {
                 toast.error("Gagal mengirim konfirmasi: " + data.error);
