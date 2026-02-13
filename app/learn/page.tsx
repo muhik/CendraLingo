@@ -54,8 +54,7 @@ export default function LearnPage() {
 
     return (
         <div className="flex min-h-screen bg-background-dark">
-            {/* Mobile Header */}
-            <StickyHeader />
+
 
             {/* Sidebar (Desktop Hidden/Different) - Actually keeping main Sidebar on Left as per standard, new Right Sidebar for extras */}
             <div className="hidden lg:block w-[256px] fixed left-0 top-0 h-full border-r border-white/10 z-50">
@@ -64,6 +63,8 @@ export default function LearnPage() {
 
             {/* Main Content Area */}
             <div className="flex-1 lg:pl-[256px]">
+                {/* Mobile Header */}
+                <StickyHeader />
                 <div className="max-w-[1400px] mx-auto pt-6 lg:pt-0 flex gap-12 justify-center">
                     {/* Feed Wrapper */}
                     <div className="flex-1 w-full max-w-[600px] pb-40 px-4 lg:px-0">
