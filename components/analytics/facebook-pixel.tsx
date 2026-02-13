@@ -9,7 +9,13 @@ export const FacebookPixel = ({ pixelId }: { pixelId: string | null }) => {
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
-        if (!pixelId) return;
+        // Debug Pixel ID
+        console.log("FacebookPixel: Initializing with ID:", pixelId);
+
+        if (!pixelId || pixelId === "null" || pixelId === "undefined") {
+            console.warn("FacebookPixel: Skipping init, invalid ID:", pixelId);
+            return;
+        }
         if (loaded) return;
 
         // Initialize Facebook Pixel
@@ -19,7 +25,7 @@ export const FacebookPixel = ({ pixelId }: { pixelId: string | null }) => {
         {
             if (f.fbq) return; n = f.fbq = function () {
                 n.callMethod ?
-                n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+                    n.callMethod.apply(n, arguments) : n.queue.push(arguments)
             };
             // @ts-ignore
             if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0';
@@ -37,12 +43,15 @@ export const FacebookPixel = ({ pixelId }: { pixelId: string | null }) => {
         // @ts-ignore
         window.fbq('track', 'PageView');
 
+        console.log("FacebookPixel: Initialized Successfully!");
+
         setLoaded(true);
     }, [pixelId, loaded]);
 
     // Track PageView on route change (SPA)
     useEffect(() => {
         if (!loaded || !pixelId) return;
+        console.log("FacebookPixel: Tracking PageView (Route Change)");
         // @ts-ignore
         window.fbq('track', 'PageView');
     }, [pathname, searchParams, loaded, pixelId]);
