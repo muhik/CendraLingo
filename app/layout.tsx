@@ -41,9 +41,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Fetch Pixel ID Server-Side
-  const settings = await db.select().from(siteSettings).where(eq(siteSettings.key, "facebook_pixel_id"));
-  const pixelId = settings[0]?.value || null;
+  // Fetch Pixel ID Server-Side (with fallback)
+  let pixelId = null;
+  try {
+    const settings = await db.select().from(siteSettings).where(eq(siteSettings.key, "facebook_pixel_id"));
+    pixelId = settings[0]?.value || "1689241645387577"; // Fallback to hardcoded ID
+  } catch (error) {
+    console.error("Failed to fetch pixel ID:", error);
+    pixelId = "1689241645387577"; // Hard fallback
+  }
 
   return (
     <html lang="en" suppressHydrationWarning>
