@@ -62,6 +62,9 @@ export const FacebookPixel = ({ pixelId }: { pixelId: string | null }) => {
 // Helper utility to track custom events
 export const trackPixelEvent = (eventName: string, data?: object) => {
     if (typeof window !== 'undefined' && (window as any).fbq) {
+        console.log(`FacebookPixel: Tracking Event '${eventName}'`, data);
         (window as any).fbq('track', eventName, data);
+    } else {
+        console.warn(`FacebookPixel: Failed to track '${eventName}' - fbq not found`);
     }
 };

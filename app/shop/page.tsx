@@ -47,15 +47,22 @@ function ShopContent() {
                 if (pending) {
                     try {
                         const purchaseData = JSON.parse(pending);
-                        // Fire Pixel
-                        import("@/components/analytics/facebook-pixel").then(({ trackPixelEvent }) => {
-                            trackPixelEvent("Purchase", purchaseData);
-                        });
-                        console.log("PIXEL: Fired delayed Purchase event", purchaseData);
+                        console.log("🛒 shop/page.tsx: Found pending purchase data:", purchaseData);
+
+                        // Fire Pixel with slight delay to ensure fbq is ready
+                        setTimeout(() => {
+                            import("@/components/analytics/facebook-pixel").then(({ trackPixelEvent }) => {
+                                trackPixelEvent("Purchase", purchaseData);
+                                toast.success("Purchase Event Sent to Facebook! 🚀");
+                            });
+                        }, 1300); // 1.3s delay
+
                         localStorage.removeItem("pending_pixel_purchase"); // Clear it
                     } catch (e) {
                         console.error("PIXEL: Failed to parse pending purchase", e);
                     }
+                } else {
+                    console.log("🛒 shop/page.tsx: No pending purchase found in localStorage.");
                 }
             }
 
