@@ -56,7 +56,8 @@ export const AdManager = () => {
 
     // Trigger on Route Change (70% chance - VERY ANNOYING)
     useEffect(() => {
-        if (pathname === '/' || pathname.includes('/admin')) {
+        // Exclude Landing Page, Admin Dashboard, and Manager Dashboard
+        if (pathname === '/' || pathname.includes('/admin') || pathname.includes('/manager')) {
             setCurrentBanner(null);
             return;
         }
